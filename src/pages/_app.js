@@ -17,6 +17,8 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/effect-fade";
 import ConfirmExitDialog from "../components/layout/Exit";
+import OfflineIndicator from "../components/ui/OfflineIndicator";
+import backgroundSync from "../components/util/backgroundSync";
 import '../components/layout/GallerySwiper.css';
 
 
@@ -39,6 +41,15 @@ function App({ Component, pageProps }) {
       offset: -80,
       easing: "ease-in-out",
     });
+  }, []);
+
+  // Initialize background sync
+  useEffect(() => {
+    backgroundSync.start();
+    
+    return () => {
+      backgroundSync.stop();
+    };
   }, []);
 
   // Listen for the Android hardware back button
@@ -73,6 +84,7 @@ function App({ Component, pageProps }) {
 
   return (
     <div className={cairo.variable}>
+      <OfflineIndicator />
       <Providers>
           <Header />
           <div style={{ minHeight: "100vh" }}>

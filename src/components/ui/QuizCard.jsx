@@ -14,6 +14,7 @@ export default function ActionAreaCard({
   grade = 0,
   total = 0,
   qType,
+  isOral = false,
 }) {
   return (
     <Card
@@ -38,7 +39,7 @@ export default function ActionAreaCard({
         width: "100%", // Allow the card to take full width of its
       }}
     >
-      <Link href={`/teoria/${qType}/${type}/${quizNumber}`}>
+      <Link href={isOral ? `/teoria/${qType}/${type}-oral/${quizNumber}` : `/teoria/${qType}/${type}/${quizNumber}`}>
         <CardActionArea>
           {/* Circle for quiz number */}
           <Box

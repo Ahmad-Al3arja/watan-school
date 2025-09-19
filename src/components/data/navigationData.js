@@ -12,6 +12,7 @@ export const navigationData = [
     subMenu: [
       { title: "أسئلة تؤوريا", path: "/teoria/nTeoria" },
       { title: "أسئلة تؤوريا استكمالي", path: "/teoria/cTeoria" },
+      { title: "English Theory Questions", path: "/teoria/english_teoria" },
       { title: "أسئلة التؤوريا الشفوية", path: "/teoria/oral" },
       {
         title: "أسئلة تدريب سياقة وإدارة مهنية",

@@ -1,5 +1,5 @@
 {
-  "name": "alquds-school",
+  "name": "watan-school",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -14,13 +14,16 @@
     "@capacitor/app": "^7.0.0",
     "@capacitor/core": "^7.0.1",
     "@capacitor/preferences": "^7.0.0",
+    "@elevenlabs/elevenlabs-js": "^2.15.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.1",
     "@mui/material": "^6.4.1",
+    "@supabase/supabase-js": "^2.57.4",
     "aos": "^2.3.4",
     "axios": "^1.12.2",
     "cheerio": "^1.1.0",
+    "dotenv": "^17.2.2",
     "framer-motion": "^12.0.1",
     "next": "15.1.5",
     "next-sitemap": "^4.2.3",

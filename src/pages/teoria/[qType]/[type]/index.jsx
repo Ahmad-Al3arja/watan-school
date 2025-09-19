@@ -8,12 +8,12 @@ import QuizCard from "@/components/ui/QuizCard";
 import SkeletonQuizCard from "@/components/skeleton/SkeletonQuizCard";
 import StatisticsCard from "@/components/ui/StatisticsCard";
 
-import quizData from "@/pages/data.json";
 import {
   countAllBookmarks,
   countAllWrongAnswers,
   loadAllTypeScores,
 } from "@/components/util/quizStorage";
+import { useQuizData } from "@/hooks/useQuizData";
 
 export default function QuizTypePage() {
   const router = useRouter();
@@ -24,8 +24,10 @@ export default function QuizTypePage() {
   const [numberOfWrong, setNumberOfWrong] = useState(0);
   const [lastScores, setLastScores] = useState({});
 
+  const { data: quizData, loading: quizDataLoading } = useQuizData();
+
   useEffect(() => {
-    if (!router.isReady || !qType || !type) return;
+    if (!router.isReady || !qType || !type || !quizData) return;
 
     const fetchStatistics = async () => {
       try {
@@ -46,9 +48,9 @@ export default function QuizTypePage() {
     };
 
     fetchStatistics();
-  }, [router.isReady, qType, type]);
+  }, [router.isReady, qType, type, quizData]);
 
-  if (!router.isReady || isLoading) {
+  if (!router.isReady || isLoading || quizDataLoading || !quizData) {
     return (
       <>
         <SectionHero title="تحميل..." subTitle="" />
@@ -190,19 +192,10 @@ export default function QuizTypePage() {
 }
 
 export async function getStaticPaths() {
-  const qTypes = ["nTeoria", "cTeoria", "oral", "training"];
-  const paths = [];
-
-  qTypes.forEach((thisQType) => {
-    const subTypes = Object.keys(quizData[thisQType] || {});
-    subTypes.forEach((theType) => {
-      paths.push({ params: { qType: thisQType, type: theType } });
-    });
-  });
-
+  // Use fallback: 'blocking' to allow dynamic generation of new exam types
   return {
-    paths,
-    fallback: false,
+    paths: [],
+    fallback: 'blocking',
   };
 }
 

@@ -14,7 +14,8 @@ const QuestionNavigation = ({
       return "#87CEEB";
     } else if (showAnswers[index]) {
       return userAnswers[index]?.isCorrect ? "success.main" : "error.main";
-    } else if (userAnswers[index] !== null) {
+    } else if (userAnswers[index] !== null && userAnswers[index] !== undefined) {
+      // Only show orange if answered but answer not revealed yet
       return "warning.light";
     } else if (visited.includes(index)) {
       return "grey.800";

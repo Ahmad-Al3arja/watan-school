@@ -10,6 +10,11 @@ export const qTypesData = [
     image: "/images/c.png",
   },
   {
+    title: "English Theory Questions",
+    path: "/teoria/english_teoria",
+    image: "/images/english.png",
+  },
+  {
     title: "أسئلة التؤوريا الشفوية",
     path: "/teoria/oral",
     image: "/images/oral.png",

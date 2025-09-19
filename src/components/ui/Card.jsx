@@ -7,7 +7,37 @@ import Typography from "@mui/material/Typography";
 import CardActionArea from "@mui/material/CardActionArea";
 import Link from "next/link";
 
-export default function ActionAreaCard({ title, image, path }) {
+export default function ActionAreaCard({ title, image, path, onClick, alt }) {
+  const cardContent = (
+    <CardActionArea onClick={onClick}>
+      <div style={{ backgroundColor: "var(--primary1)", padding: "2rem" }}>
+        <CardMedia
+          component="img"
+          image={image}
+          loading="lazy"
+          sx={{
+            display: "block",
+            width: "100px", // adjust as needed
+            height: "100px", // adjust as needed
+            objectFit: "contain",
+            margin: "0 auto",
+          }}
+          alt={alt || title}
+        />
+      </div>
+      <CardContent>
+        <Typography
+          gutterBottom
+          variant="h5"
+          component="div"
+          textAlign="center"
+        >
+          {title}
+        </Typography>
+      </CardContent>
+    </CardActionArea>
+  );
+
   return (
     <Card
       sx={{
@@ -19,35 +49,13 @@ export default function ActionAreaCard({ title, image, path }) {
         },
       }}
     >
-      <Link href={path}>
-        <CardActionArea>
-          <div style={{ backgroundColor: "var(--primary1)", padding: "2rem" }}>
-            <CardMedia
-              component="img"
-              image={image}
-              loading="lazy"
-              sx={{
-                display: "block",
-                width: "100px", // adjust as needed
-                height: "100px", // adjust as needed
-                objectFit: "contain",
-                margin: "0 auto",
-              }}
-              alt={title}
-            />
-          </div>
-          <CardContent>
-            <Typography
-              gutterBottom
-              variant="h5"
-              component="div"
-              textAlign="center"
-            >
-              {title}
-            </Typography>
-          </CardContent>
-        </CardActionArea>
-      </Link>
+      {path ? (
+        <Link href={path}>
+          {cardContent}
+        </Link>
+      ) : (
+        cardContent
+      )}
     </Card>
   );
 }

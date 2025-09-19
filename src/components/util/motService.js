@@ -1,7 +1,7 @@
 // Service to fetch theoretical exam results from MOT website
 export const fetchTheoreticalExamResult = async (searchId) => {
   try {
-    console.log('Fetching from MOT website via server-side API...');
+    // Fetching from MOT website via server-side API
     
     const response = await fetch('/api/mot-exam', {
       method: 'POST',
@@ -13,9 +13,7 @@ export const fetchTheoreticalExamResult = async (searchId) => {
 
     const result = await response.json();
     
-    console.log('MOT Service - Response status:', response.status);
-    console.log('MOT Service - Response ok:', response.ok);
-    console.log('MOT Service - Result:', result);
+    // MOT Service - Response received
 
     if (!response.ok) {
       throw new Error(result.message || 'حدث خطأ أثناء جلب البيانات من موقع وزارة المواصلات. يرجى المحاولة لاحقاً.');
@@ -28,7 +26,7 @@ export const fetchTheoreticalExamResult = async (searchId) => {
 
     return result;
   } catch (error) {
-    console.error('MOT fetch error:', error);
+    // MOT fetch error
     throw error;
   }
 };

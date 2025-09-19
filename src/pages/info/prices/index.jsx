@@ -9,9 +9,12 @@ import {
   Avatar,
   alpha,
   Chip,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import { keyframes } from "@emotion/react";
 import SectionTitle from "@/components/ui/SectionTitle";
+import { useLicenseData } from "@/hooks/useLicenseData";
 
 const float = keyframes`
   0% { transform: translateY(0px); }
@@ -19,58 +22,40 @@ const float = keyframes`
   100% { transform: translateY(0px); }
 `;
 
-const plans = [
-  {
-    title: "خصوصي",
-    icon: "/images/private.png",
-    price: "₪ 90",
-    tests: ["₪ 290 التست الأول", "₪ 370 التست الثاني وما فوق"],
-    age: "17 سنة",
+// Helper function to get icon path based on license type
+const getIconPath = (typeKey) => {
+  const iconMap = {
+    private: "/images/private.png",
+    motorcycle: "/images/motocycle.png",
+    light_truck: "/images/light.png",
+    heavy_truck: "/images/heavy.png",
+    trailer: "/images/trailer.png",
+    public_taxi: "/images/taxi.png",
+    public_bus: "/images/bus.png",
+  };
+  return iconMap[typeKey] || "/images/private.png";
+};
+
+// Helper function to transform license data to plan format
+const transformLicenseToPlan = (licenseType, pricing) => {
+  const lessonPrice = pricing.find(p => p.price_type === 'lesson');
+  const firstTestPrice = pricing.find(p => p.price_type === 'first_test');
+  const retestPrice = pricing.find(p => p.price_type === 'retest');
+  
+  const tests = [];
+  if (firstTestPrice) tests.push(`${firstTestPrice.currency} ${firstTestPrice.price} ${firstTestPrice.description_ar}`);
+  if (retestPrice) tests.push(`${retestPrice.currency} ${retestPrice.price} ${retestPrice.description_ar}`);
+  
+  return {
+    title: licenseType.name_ar,
+    icon: getIconPath(licenseType.type_key),
+    price: lessonPrice ? `${lessonPrice.currency} ${lessonPrice.price}` : "₪ 0",
+    tests: tests,
+    age: `${licenseType.min_age_exam} سنة`,
     color: "linear-gradient(135deg, #2d7a2d 0%, #4db84d 100%)",
-  },
-  {
-    title: "شحن خفيف",
-    icon: "/images/light.png",
-    price: "₪ 110",
-    tests: ["₪ 350 التست الأول", "₪ 430 التست الثاني وما فوق"],
-    age: "17.5 سنة",
-    color: "linear-gradient(135deg, #2d7a2d 0%, #4db84d 100%)",
-  },
-  {
-    title: "شحن ثقيل",
-    icon: "/images/heavy.png",
-    price: "₪ 160",
-    tests: ["₪ 500 التست الأول", "₪ 580 التست الثاني وما فوق"],
-    age: "19 سنة",
-    color: "linear-gradient(135deg, #2d7a2d 0%, #4db84d 100%)",
-  },
-  {
-    title: "تريلا",
-    icon: "/images/trailer.png",
-    price: "₪ 160",
-    tests: ["₪ 500 التست الأول", "₪ 580 التست الثاني وما فوق"],
-    age: "20 سنة",
-    color: "linear-gradient(135deg, #2d7a2d 0%, #4db84d 100%)",
-  },
-  {
-    title: "تكسي عمومي",
-    icon: "/images/taxi.png",
-    price: "₪ 90",
-    tests: ["₪ 290 التست الأول", "₪ 370 التست الثاني وما فوق"],
-    age: "21 سنة",
-    color: "linear-gradient(135deg, #2d7a2d 0%, #4db84d 100%)",
-    link: "/taxi",
-  },
-  {
-    title: "باص عمومي",
-    icon: "/images/bus.png",
-    price: "₪ 160",
-    tests: ["₪ 500 التست الأول", "₪ 580 التست الثاني وما فوق"],
-    age: "21 سنة",
-    color: "linear-gradient(135deg, #2d7a2d 0%, #4db84d 100%)",
-    link: "/bus",
-  },
-];
+    typeKey: licenseType.type_key,
+  };
+};
 
 const PricingCard = ({ plan }) => {
   const theme = useTheme();
@@ -252,6 +237,79 @@ const PricingCard = ({ plan }) => {
 };
 
 const PricingSection = () => {
+  const { data, loading, error } = useLicenseData();
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          py: 10,
+          px: { xs: 2, md: 6 },
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "50vh",
+        }}
+      >
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box
+        sx={{
+          py: 10,
+          px: { xs: 2, md: 6 },
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "50vh",
+        }}
+      >
+        <Alert severity="error" sx={{ maxWidth: 600 }}>
+          <Typography variant="h6" gutterBottom>
+            خطأ في تحميل البيانات
+          </Typography>
+          <Typography variant="body2">
+            {error.message || "حدث خطأ أثناء تحميل أسعار الرخص. يرجى المحاولة مرة أخرى."}
+          </Typography>
+        </Alert>
+      </Box>
+    );
+  }
+
+  if (!data || !data.licenseTypes || data.licenseTypes.length === 0) {
+    return (
+      <Box
+        sx={{
+          py: 10,
+          px: { xs: 2, md: 6 },
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "50vh",
+        }}
+      >
+        <Alert severity="info" sx={{ maxWidth: 600 }}>
+          <Typography variant="h6" gutterBottom>
+            لا توجد بيانات متاحة
+          </Typography>
+          <Typography variant="body2">
+            لم يتم العثور على بيانات الأسعار. يرجى المحاولة مرة أخرى لاحقاً.
+          </Typography>
+        </Alert>
+      </Box>
+    );
+  }
+
+  // Transform license data to plan format
+  const plans = data.licenseTypes.map(licenseType => {
+    const pricing = (data.licensePricing || []).filter(p => p.license_type_id === licenseType.id);
+    return transformLicenseToPlan(licenseType, pricing);
+  });
+
   return (
     <>
       <Box
@@ -282,7 +340,7 @@ const PricingSection = () => {
 
           <Grid container spacing={4} justifyContent="center" sx={{ mt: 6 }}>
             {plans.map((plan, index) => (
-              <PricingCard key={index} plan={plan} />
+              <PricingCard key={plan.typeKey || index} plan={plan} />
             ))}
           </Grid>
         </Box>

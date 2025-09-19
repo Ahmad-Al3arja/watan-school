@@ -1,5 +1,42 @@
 import { Preferences } from "@capacitor/preferences";
 
+// Fallback storage for browser environments
+const browserStorage = {
+  async get(options) {
+    try {
+      const value = localStorage.getItem(options.key);
+      return { value };
+    } catch (error) {
+      return { value: null };
+    }
+  },
+  async set(options) {
+    try {
+      localStorage.setItem(options.key, options.value);
+    } catch (error) {
+      // Silent fail for localStorage
+    }
+  }
+};
+
+// Smart storage that tries Capacitor first, then falls back to localStorage
+const storage = {
+  async get(options) {
+    try {
+      return await Preferences.get(options);
+    } catch (error) {
+      return await browserStorage.get(options);
+    }
+  },
+  async set(options) {
+    try {
+      await Preferences.set(options);
+    } catch (error) {
+      await browserStorage.set(options);
+    }
+  }
+};
+
 /* --------------------------------------------------------------------------
    HELPER: Ensure Nested Object
    -------------------------------------------------------------------------- */
@@ -20,12 +57,12 @@ function ensureNestedObject(obj, ...keys) {
 const WRONG_ANSWERS_KEY = "wrongAnswers";
 
 async function loadAllWrongAnswers() {
-  const { value } = await Preferences.get({ key: WRONG_ANSWERS_KEY });
+  const { value } = await storage.get({ key: WRONG_ANSWERS_KEY });
   return value ? JSON.parse(value) : {};
 }
 
 async function saveAllWrongAnswers(allWrongAnswers) {
-  await Preferences.set({
+  await storage.set({
     key: WRONG_ANSWERS_KEY,
     value: JSON.stringify(allWrongAnswers),
   });
@@ -108,12 +145,12 @@ export async function loadAllTypeWrongAnswers(qType, type) {
 const BOOKMARKS_KEY = "bookmarks";
 
 async function loadAllBookmarks() {
-  const { value } = await Preferences.get({ key: BOOKMARKS_KEY });
+  const { value } = await storage.get({ key: BOOKMARKS_KEY });
   return value ? JSON.parse(value) : {};
 }
 
 async function saveAllBookmarks(allBookmarks) {
-  await Preferences.set({
+  await storage.set({
     key: BOOKMARKS_KEY,
     value: JSON.stringify(allBookmarks),
   });
@@ -196,12 +233,12 @@ export async function loadAllTypeBookmarks(qType, type) {
 const LAST_SCORES_KEY = "lastScores";
 
 async function loadAllScores() {
-  const { value } = await Preferences.get({ key: LAST_SCORES_KEY });
+  const { value } = await storage.get({ key: LAST_SCORES_KEY });
   return value ? JSON.parse(value) : {};
 }
 
 async function saveAllScores(allScores) {
-  await Preferences.set({
+  await storage.set({
     key: LAST_SCORES_KEY,
     value: JSON.stringify(allScores),
   });
@@ -273,8 +310,138 @@ export async function countAllWrongAnswers(qType, type) {
 }
 
 /* --------------------------------------------------------------------------
+   EXAM PROGRESS
+   -------------------------------------------------------------------------- */
+const EXAM_PROGRESS_KEY = "examProgress";
+
+async function loadAllExamProgress() {
+  const { value } = await storage.get({ key: EXAM_PROGRESS_KEY });
+  return value ? JSON.parse(value) : {};
+}
+
+async function saveAllExamProgress(allProgress) {
+  await storage.set({
+    key: EXAM_PROGRESS_KEY,
+    value: JSON.stringify(allProgress),
+  });
+}
+
+/**
+ * Save exam progress for a specific quiz
+ */
+export async function saveExamProgress(
+  qType,
+  type,
+  quizNumber,
+  currentIndex,
+  userAnswers,
+  visited,
+  timeLeft,
+  showAnswers,
+  quizContent = null
+) {
+  const all = await loadAllExamProgress();
+  const key = `${qType}-${type}-${quizNumber}`;
+  
+  const progressData = {
+    currentIndex,
+    userAnswers,
+    visited,
+    timeLeft,
+    showAnswers,
+    timestamp: new Date().toISOString(),
+    quizContent
+  };
+  
+  all[key] = progressData;
+  await saveAllExamProgress(all);
+}
+
+/**
+ * Load exam progress for a specific quiz
+ */
+export async function loadExamProgress(qType, type, quizNumber) {
+  const all = await loadAllExamProgress();
+  const key = `${qType}-${type}-${quizNumber}`;
+  return all[key] || null;
+}
+
+/**
+ * Check if exam progress exists for a specific quiz
+ */
+export async function hasExamProgress(qType, type, quizNumber) {
+  const progress = await loadExamProgress(qType, type, quizNumber);
+  return progress !== null;
+}
+
+/**
+ * Clear exam progress for a specific quiz
+ */
+export async function clearExamProgress(qType, type, quizNumber) {
+  const all = await loadAllExamProgress();
+  const key = `${qType}-${type}-${quizNumber}`;
+  delete all[key];
+  await saveAllExamProgress(all);
+}
+
+/**
+ * Get all exam progress entries
+ */
+export async function getAllExamProgress() {
+  return await loadAllExamProgress();
+}
+
+/**
+ * Validate exam progress data
+ */
+export function isProgressValid(progress, expectedTotal, isRandom = false) {
+  if (!progress) return false;
+  
+  // Check required fields
+  if (typeof progress.currentIndex !== 'number' ||
+      !Array.isArray(progress.userAnswers) ||
+      !Array.isArray(progress.visited) ||
+      typeof progress.timeLeft !== 'number' ||
+      !Array.isArray(progress.showAnswers)) {
+    return false;
+  }
+  
+  // Check bounds
+  if (progress.currentIndex < 0 || progress.currentIndex >= expectedTotal) {
+    return false;
+  }
+  
+  // Check array lengths
+  if (progress.userAnswers.length !== expectedTotal ||
+      progress.showAnswers.length !== expectedTotal) {
+    return false;
+  }
+  
+  // For random quizzes, check if quiz content exists
+  if (isRandom && (!progress.quizContent || !Array.isArray(progress.quizContent))) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Check if exam progress is recent (within 24 hours)
+ */
+export function isProgressRecent(progress) {
+  if (!progress || !progress.timestamp) return false;
+  
+  const progressTime = new Date(progress.timestamp);
+  const now = new Date();
+  const hoursDiff = (now - progressTime) / (1000 * 60 * 60);
+  
+  return hoursDiff < 24; // Progress is valid for 24 hours
+}
+
+/* --------------------------------------------------------------------------
    ALIASES FOR LOADING ALL QUIZZES (Instead of single quiz)
    -------------------------------------------------------------------------- */
 export const loadTypeWrongAnswers = loadAllTypeWrongAnswers;
 export const loadTypeBookmarks = loadAllTypeBookmarks;
 export const loadTypeScores = loadAllTypeScores;
+

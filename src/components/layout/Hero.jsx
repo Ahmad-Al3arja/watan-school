@@ -28,7 +28,10 @@ export default function HeroSlider() {
               src={slide.imageUrl}
               alt={slide.altText}
               fill // New prop
-              style={{ objectFit: "cover" }}
+              style={{
+                objectFit: "cover",
+                objectPosition: "center center" // Better positioning for sign images
+              }}
               placeholder="blur" // Enables blur effect
               blurDataURL={slide.blurDataUrl} // Base64-encoded placeholder
               priority={index === 0} // Load first image eagerly

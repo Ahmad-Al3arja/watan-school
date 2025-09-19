@@ -16,6 +16,8 @@ import {
   styled,
   Box,
   alpha,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import {
   ExpandMore,
@@ -24,6 +26,7 @@ import {
   Description,
   AssignmentInd,
 } from "@mui/icons-material";
+import { useLicenseData } from "@/hooks/useLicenseData";
 
 const theme = createTheme({
   direction: "rtl",
@@ -86,6 +89,106 @@ const ProcessStep = ({ title, icon, children }) => (
 );
 
 const LicenseProcess = () => {
+  const { data, loading, error } = useLicenseData();
+
+  // Helper function to get icon based on procedure type
+  const getProcedureIcon = (procedureType) => {
+    const iconMap = {
+      health: <MedicalInformation color="primary" sx={{ fontSize: 28 }} />,
+      theory: <Description color="primary" sx={{ fontSize: 28 }} />,
+      practical: <DriveEta color="primary" sx={{ fontSize: 28 }} />,
+      license_collection: <AssignmentInd color="primary" sx={{ fontSize: 28 }} />,
+    };
+    return iconMap[procedureType] || <Description color="primary" sx={{ fontSize: 28 }} />;
+  };
+
+  // Helper function to get step number based on procedure type
+  const getStepNumber = (procedureType) => {
+    const stepMap = {
+      health: "1",
+      theory: "2", 
+      practical: "3",
+      license_collection: "4",
+    };
+    return stepMap[procedureType] || "1";
+  };
+
+  if (loading) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Container maxWidth="sm" sx={{ padding: 6 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "50vh",
+            }}
+          >
+            <CircularProgress size={60} />
+          </Box>
+        </Container>
+      </ThemeProvider>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Container maxWidth="sm" sx={{ padding: 6 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "50vh",
+            }}
+          >
+            <Alert severity="error" sx={{ maxWidth: 600 }}>
+              <Typography variant="h6" gutterBottom>
+                خطأ في تحميل البيانات
+              </Typography>
+              <Typography variant="body2">
+                {error.message || "حدث خطأ أثناء تحميل إجراءات الرخص. يرجى المحاولة مرة أخرى."}
+              </Typography>
+            </Alert>
+          </Box>
+        </Container>
+      </ThemeProvider>
+    );
+  }
+
+  if (!data || !data.licenseProcedures || data.licenseProcedures.length === 0) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Container maxWidth="sm" sx={{ padding: 6 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "50vh",
+            }}
+          >
+            <Alert severity="info" sx={{ maxWidth: 600 }}>
+              <Typography variant="h6" gutterBottom>
+                لا توجد بيانات متاحة
+              </Typography>
+              <Typography variant="body2">
+                لم يتم العثور على إجراءات الرخص. يرجى المحاولة مرة أخرى لاحقاً.
+              </Typography>
+            </Alert>
+          </Box>
+        </Container>
+      </ThemeProvider>
+    );
+  }
+
+  // Sort procedures by step_order
+  const sortedProcedures = [...(data.licenseProcedures || [])].sort((a, b) => a.step_order - b.step_order);
 
   return (
     <ThemeProvider theme={theme}>
@@ -110,153 +213,67 @@ const LicenseProcess = () => {
           </Typography>
         </Box>
 
-        <ProcessStep
-          title="1) الفحص الطبي"
-          icon={<MedicalInformation color="primary" sx={{ fontSize: 28 }} />}
-        >
-          <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-            دائرة الصحة
-          </Typography>
-          <List dense sx={{ py: 0 }}>
-            {[
-              "الخطوة الأولى بعد عمل المعاملة في مديرية السياقة",
-              "مواعيد الفحص: الأحد، الثلاثاء والأربعاء",
-              "من الساعة 08:00 صباحاً إلى 10:30 صباحاً",
-              "يُمنع تناول الطعام قبل الفحص ",
-            ].map((text, index) => (
-              <ListItem key={index} sx={{ py: 0.5 }}>
-                <ListItemIcon sx={{ minWidth: 32 }}>
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      backgroundColor: "primary.main",
-                      borderRadius: "50%",
-                    }}
-                  />
-                </ListItemIcon>
-                <ListItemText
-                  primary={text}
-                  primaryTypographyProps={{
-                    variant: "body1",
-                    textAlign: "right",
-                  }}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </ProcessStep>
-
-        <ProcessStep
-          title="2) الفحص النظري (التؤوريا)"
-          icon={<Description color="primary" sx={{ fontSize: 28 }} />}
-        >
-          <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-            دائرة السير
-          </Typography>
-          <List dense sx={{ py: 0 }}>
-            {[
-              "الدراسة الجيدة للنظرية والتدرب على الامتحانات التدريبية",
-              "التقديم أيام الأحد إلى الرابع",
-              "الحضور الساعة 08:00 صباحاً والانتظار حسب الدور",
-              "الامتحان متاح على الموقع الإلكتروني للمدرسة",
-            ].map((text, index) => (
-              <ListItem key={index} sx={{ py: 0.5 }}>
-                <ListItemIcon sx={{ minWidth: 32 }}>
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      backgroundColor: "primary.main",
-                      borderRadius: "50%",
-                    }}
-                  />
-                </ListItemIcon>
-                <ListItemText
-                  primary={text}
-                  primaryTypographyProps={{
-                    variant: "body1",
-                    textAlign: "right",
-                  }}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </ProcessStep>
-
-        <ProcessStep
-          title="3) الفحص العملي (التست)"
-          icon={<DriveEta color="primary" sx={{ fontSize: 28 }} />}
-        >
-          <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-            دائرة السير
-          </Typography>
-          <List dense sx={{ py: 0 }}>
-            {[
-              "الخطوة الأخيرة بعد إتقان مهارات القيادة",
-              "التقديم أيام الأحد إلى الخميس",
-              "يتم تحديد الموعد بدقة مسبقاً",
-              "يتم التنسيق من خلال مدرسة السياقة وتحديد الموعد",
-              "الاختبار يشمل المهارات الأساسية في القيادة",
-            ].map((text, index) => (
-              <ListItem key={index} sx={{ py: 0.5 }}>
-                <ListItemIcon sx={{ minWidth: 32 }}>
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      backgroundColor: "primary.main",
-                      borderRadius: "50%",
-                    }}
-                  />
-                </ListItemIcon>
-                <ListItemText
-                  primary={text}
-                  primaryTypographyProps={{
-                    variant: "body1",
-                    textAlign: "right",
-                  }}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </ProcessStep>
-
-        <ProcessStep
-          title="4) استلام الرخصة"
-          icon={<AssignmentInd color="primary" sx={{ fontSize: 28 }} />}
-        >
-          <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-            دائرة السير
-          </Typography>
-          <Box sx={{ bgcolor: "#f8f9fa", p: 3, borderRadius: 2 }}>
-            <Typography variant="body1" paragraph>
-              بعد النجاح في الامتحان العملي، يمكنك استلام الرخصة من دائرة السير
-              خلال أوقات الدوام الرسمي:
+        {sortedProcedures.map((procedure, index) => (
+          <ProcessStep
+            key={procedure.id}
+            title={`${getStepNumber(procedure.procedure_type)}) ${procedure.title_ar}`}
+            icon={getProcedureIcon(procedure.procedure_type)}
+          >
+            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+              {procedure.location_ar}
             </Typography>
-            <Box sx={{ display: "flex", gap: 4, mt: 2 }}>
-              <Box>
-                <Typography variant="body1" fontWeight={500}>
-                  الأيام المتاحة:
+            
+            {procedure.description_ar && (
+              <Typography variant="body1" paragraph>
+                {procedure.description_ar}
+              </Typography>
+            )}
+
+            {procedure.schedule_ar && (
+              <List dense sx={{ py: 0 }}>
+                {procedure.schedule_ar.split('،').map((text, idx) => (
+                  <ListItem key={idx} sx={{ py: 0.5 }}>
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          backgroundColor: "primary.main",
+                          borderRadius: "50%",
+                        }}
+                      />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={text.trim()}
+                      primaryTypographyProps={{
+                        variant: "body1",
+                        textAlign: "right",
+                      }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+
+            {procedure.requirements_ar && (
+              <Box sx={{ bgcolor: "#f8f9fa", p: 3, borderRadius: 2, mt: 2 }}>
+                <Typography variant="body1" paragraph>
+                  {procedure.requirements_ar}
                 </Typography>
-                <Typography variant="body1">الأحد إلى الخميس</Typography>
               </Box>
-              <Box>
-                <Typography variant="body1" fontWeight={500}>
-                  أوقات الاستلام:
-                </Typography>
-                <Typography variant="body1">08:00 ص - 01:00 م</Typography>
-              </Box>
-            </Box>
-            <Typography
-              variant="body1"
-              sx={{ mt: 2, color: "#e74c3c" }}
-              fontWeight={500}
-            >
-              ملاحظة: يجب إحضار الهوية الشخصية والحضور شخصياً
-            </Typography>
-          </Box>
-        </ProcessStep>
+            )}
+
+            {procedure.notes_ar && (
+              <Typography
+                variant="body1"
+                sx={{ mt: 2, color: "#e74c3c" }}
+                fontWeight={500}
+              >
+                ملاحظة: {procedure.notes_ar}
+              </Typography>
+            )}
+          </ProcessStep>
+        ))}
       </Container>
     </ThemeProvider>
   );

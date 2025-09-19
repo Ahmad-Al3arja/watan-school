@@ -16,7 +16,9 @@ import {
   List,
   ListItem,
   ListItemText,
+  CircularProgress,
 } from "@mui/material";
+import { useLicenseData } from "@/hooks/useLicenseData";
 
 const StyledCard = styled(Card)(({ theme }) => ({
   transition: "transform 0.3s, box-shadow 0.3s",
@@ -29,6 +31,8 @@ const StyledCard = styled(Card)(({ theme }) => ({
 }));
 
 const LicenseSection = () => {
+  const { data, loading, error } = useLicenseData();
+  
   // SEO meta variables
   const pageTitle =
     " مدرسة الوطن | الحصول على الرخصة  ";
@@ -38,96 +42,117 @@ const LicenseSection = () => {
     "رخصة سياقة, وثائق, متطلبات, شروط, الحصول على الرخصة, فلسطين, دليل سياقة";
   const canonicalUrl = "https://alqudss.com/license-requirements";
 
-  const licenses = [
-    {
-      img: "/images/private.png",
-      title: "خصوصي",
-      requirements: ["– 2 صور شخصية", "– صورة عن الهوية"],
-      ages: ["يبدأ بالفحوصات 17 سنة", "يحصل على الرخصة 17.5 سنة"],
-    },
-    {
-      img: "/images/motocycle.png",
-      title: "دراجة نارية",
-      requirements: ["– 2 صور شخصية", "– صورة عن الهوية"],
-      ages: ["يبدأ بالفحوصات 17 سنة", "يحصل على الرخصة 17 سنة"],
-      note:
-        "ملاحظة: في حال كان المتقدم حاصل على رخصة سابقة، يُعفى من دراسة التؤوريا ويمكنه التقديم مباشرة للامتحان العملي (التست).",
-    },
-    {
-      img: "/images/light.png",
-      title: "شحن خفيف",
-      requirements: ["– 4 صور شخصية", "– صورة عن الهوية"],
-      ages: ["يبدأ بالفحوصات 17.5 سنة", "يحصل على الرخصة 18 سنة"],
-    },
-    {
-      img: "/images/heavy.png",
-      title: "شحن ثقيل",
-      requirements: [
-        "– 4 صور شخصية",
-        "– صورة عن الهوية",
-        "– صورة عن الرخصة",
-        "– شهادة مدرسية مصدقة",
-      ],
-      ages: ["19 سنة"],
-      conditions: [
-        "– أن يكون حاصل على رخصة شحن مضى عليها سنة.",
-        "– الحصول على شهادة دورة شحن ثقيل من كلية مرخصة.",
-        "– أن يكون قد اجتاز الصف الخامس في التعليم المدرسي.",
-      ],
-    },
-    {
-      img: "/images/trailer.png",
-      title: "تريلا",
-      requirements: [
-        "– 4 صور شخصية",
-        "– صورة عن الهوية",
-        "– صورة عن الرخصة",
-        "– شهادة مدرسية مصدقة",
-        "– شهادة دورة شحن ثقيل",
-      ],
-      ages: ["20 سنة"],
-      conditions: [
-        "– أن يكون حاصل على رخصة شحن ثقيل مضى عليها سنة.",
-        "– أن يكون قد اجتاز الصف الخامس في التعليم المدرسي.",
-      ],
-    },
-    {
-      img: "/images/taxi.png",
-      title: "تاكسي عمومي",
-      requirements: [
-        "– 4 صور شخصية",
-        "– صورة عن الهوية",
-        "– صورة عن الرخصة",
-        "– شهادة مدرسية مصدقة",
-        "– شهادة حسن سير وسلوك",
-      ],
-      ages: ["21 سنة"],
-      conditions: [
-        "– أن يكون حاصل على رخصة خصوصي مضى عليها سنتين.",
-        "– الحصول على شهادة دورة عمومي من كلية مرخصة من وزارة النقل والمواصلات قبل الامتحان النظري (التؤوريا).",
-        "– أن يكون قد اجتاز الصف الثاني إعدادي.",
-      ],
-    },
-    {
-      img: "/images/bus.png",
-      title: "باص عمومي",
-      requirements: [
-        "– 4 صور شخصية",
-        "– صورة عن الهوية",
-        "– صورة عن الرخصة",
-        "– شهادة مدرسية مصدقة",
-        "– شهادة حسن سير وسلوك",
-      ],
-      ages: ["21 سنة"],
-      conditions: [
-        "– أن يكون حاصل على رخصة شحن مضى عليها سنتين.",
-        "– الحصول على شهادة دورة عمومي من كلية مرخصة من وزارة النقل والمواصلات قبل الامتحان النظري (التؤوريا).",
-        "– أن يكون قد اجتاز الصف الثاني إعدادي.",
-      ],
-    },
-  ];
+  // Helper function to get icon path based on license type
+  const getIconPath = (typeKey) => {
+    const iconMap = {
+      private: "/images/private.png",
+      motorcycle: "/images/motocycle.png",
+      light_truck: "/images/light.png",
+      heavy_truck: "/images/heavy.png",
+      trailer: "/images/trailer.png",
+      public_taxi: "/images/taxi.png",
+      public_bus: "/images/bus.png",
+    };
+    return iconMap[typeKey] || "/images/private.png";
+  };
+
+  // Helper function to transform license data to display format
+  const transformLicenseData = (licenseType, requirements) => {
+    const documentRequirements = requirements
+      .filter(req => req.requirement_type === 'document')
+      .map(req => `– ${req.title_ar}`);
+    
+    const ageRequirements = requirements
+      .filter(req => req.requirement_type === 'condition' && req.title_ar.includes('العمر'))
+      .map(req => req.description_ar);
+    
+    const conditions = requirements
+      .filter(req => req.requirement_type === 'condition' && req.title_ar.includes('الشروط'))
+      .map(req => `– ${req.description_ar}`);
+    
+    const notes = requirements
+      .filter(req => req.requirement_type === 'note')
+      .map(req => req.description_ar);
+
+    return {
+      img: getIconPath(licenseType.type_key),
+      title: licenseType.name_ar,
+      requirements: documentRequirements,
+      ages: ageRequirements,
+      conditions: conditions.length > 0 ? conditions : undefined,
+      note: notes.length > 0 ? notes[0] : undefined,
+    };
+  };
 
   const theme = useTheme();
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          py: 8,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "50vh",
+        }}
+      >
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box
+        sx={{
+          py: 8,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "50vh",
+        }}
+      >
+        <Alert severity="error" sx={{ maxWidth: 600 }}>
+          <Typography variant="h6" gutterBottom>
+            خطأ في تحميل البيانات
+          </Typography>
+          <Typography variant="body2">
+            {error.message || "حدث خطأ أثناء تحميل متطلبات الرخص. يرجى المحاولة مرة أخرى."}
+          </Typography>
+        </Alert>
+      </Box>
+    );
+  }
+
+  if (!data || !data.licenseTypes || data.licenseTypes.length === 0) {
+    return (
+      <Box
+        sx={{
+          py: 8,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "50vh",
+        }}
+      >
+        <Alert severity="info" sx={{ maxWidth: 600 }}>
+          <Typography variant="h6" gutterBottom>
+            لا توجد بيانات متاحة
+          </Typography>
+          <Typography variant="body2">
+            لم يتم العثور على متطلبات الرخص. يرجى المحاولة مرة أخرى لاحقاً.
+          </Typography>
+        </Alert>
+      </Box>
+    );
+  }
+
+  // Transform license data to display format
+  const licenses = data.licenseTypes.map(licenseType => {
+    const requirements = (data.licenseRequirements || []).filter(req => req.license_type_id === licenseType.id);
+    return transformLicenseData(licenseType, requirements);
+  });
 
   return (
       <Box

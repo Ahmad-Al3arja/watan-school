@@ -4,7 +4,7 @@ import SectionHero from "@/components/layout/SectionHero";
 import QuizCard from "@/components/ui/QuizCard";
 import SkeletonQuizCard from "@/components/skeleton/SkeletonQuizCard"; // Add this import
 import { Container, Grid, Box, Skeleton } from "@mui/material"; // Add Skeleton import
-import quizData from "@/pages/data.json";
+import { useQuizData } from "@/hooks/useQuizData";
 import StatisticsCard from "@/components/ui/StatisticsCard";
 import {
   loadTypeBookmarks,
@@ -19,6 +19,8 @@ export default function QuizTypePage({ qType }) {
   const [numberOfSaved, setNumberOfSaved] = useState(0);
   const [numberOfWrong, setNumberOfWrong] = useState(0);
   const [lastScores, setLastScores] = useState({});
+
+  const { data: quizData, loading: quizDataLoading } = useQuizData();
 
   useEffect(() => {
     if (params && params.type) {
@@ -47,7 +49,7 @@ export default function QuizTypePage({ qType }) {
 
         setIsLoading(false); // Update loading state when data is ready
       } catch (error) {
-        console.error("Error loading statistics or scores:", error);
+        // Error loading statistics or scores
         setIsLoading(false); // Ensure loading state is updated even if there's an error
       }
     };
@@ -56,7 +58,7 @@ export default function QuizTypePage({ qType }) {
   }, [type]);
 
   // Show skeletons while loading
-  if (isLoading) {
+  if (isLoading || quizDataLoading || !quizData) {
     return (
       <>
         <SectionHero title="تحميل..." subTitle="" />
@@ -93,23 +95,23 @@ export default function QuizTypePage({ qType }) {
   }
 
   // Existing validations
-  if (!quizData[qType][type]) {
+  if (!quizData?.[qType]?.[type]) {
     return <div>الصفحة غير موجودة</div>;
   }
 
   // Rest of your existing code...
   const quizNumbers = Object.keys(quizData[qType][type]);
   const mapTypes = {
-    private: qType == "cTeoria" ? "استكمالي" : "خصوصي",
-    light: "شحن خفيف",
-    heavy: "شحن ثقيل",
-    taxi: "عمومي",
-    motorcycle: "دراجة نارية",
-    tractor: "تراكتور",
+    private: qType == "cTeoria" ? "استكمالي" : qType == "english_teoria" ? "Private License" : "خصوصي",
+    light: qType == "english_teoria" ? "Light Truck License" : "شحن خفيف",
+    heavy: qType == "english_teoria" ? "Heavy Truck License" : "شحن ثقيل",
+    taxi: qType == "english_teoria" ? "Taxi License" : "عمومي",
+    motorcycle: qType == "english_teoria" ? "Motorcycle License" : "دراجة نارية",
+    tractor: qType == "english_teoria" ? "Tractor License" : "تراكتور",
   };
   return (
     <>
-      <SectionHero title={`أسئلة تؤوريا ${mapTypes[type]}`} subTitle="" />
+      <SectionHero title={qType == "english_teoria" ? `English Theory Questions - ${mapTypes[type]}` : `أسئلة تؤوريا ${mapTypes[type]}`} subTitle="" />
       <Container
         sx={{
           paddingY: "30px",
@@ -142,7 +144,7 @@ export default function QuizTypePage({ qType }) {
             return (
               <Grid item key={quizNumber} xs={12} sm={6} md={4} lg={3} xl={3}>
                 <QuizCard
-                  quizName={`أسئلة تؤوريا ${mapTypes[type]}`}
+                  quizName={qType == "english_teoria" ? `English Theory - ${mapTypes[type]}` : `أسئلة تؤوريا ${mapTypes[type]}`}
                   quizNumber={quizNumber}
                   type={type}
                   qType={qType}

@@ -3,20 +3,26 @@
 import React from "react";
 
 /**
- * Parses a string and replaces [[className]] with <i className="signal className"></i>
+ * Parses a string and handles both [[className]] patterns and HTML tags
  * @param {string} text - The text to parse
  * @returns {Array} - An array of React elements and strings
  */
 const parseText = (text) => {
+  if (!text) return text;
+  
+  // First, handle HTML span tags by removing them (they're empty anyway)
+  let processedText = text.replace(/<span[^>]*><\/span>/g, '');
+  
+  // Then handle the [[className]] pattern
   const regex = /\[\[([a-zA-Z0-9]+)\]\]/g;
   const parts = [];
   let lastIndex = 0;
   let match;
 
-  while ((match = regex.exec(text)) !== null) {
+  while ((match = regex.exec(processedText)) !== null) {
     // Push the text before the match
     if (match.index > lastIndex) {
-      parts.push(text.substring(lastIndex, match.index));
+      parts.push(processedText.substring(lastIndex, match.index));
     }
 
     // Extract the className from the match
@@ -30,8 +36,13 @@ const parseText = (text) => {
   }
 
   // Push the remaining text after the last match
-  if (lastIndex < text.length) {
-    parts.push(text.substring(lastIndex));
+  if (lastIndex < processedText.length) {
+    parts.push(processedText.substring(lastIndex));
+  }
+
+  // If no matches were found, return the processed text as is
+  if (parts.length === 0) {
+    return processedText;
   }
 
   return parts;

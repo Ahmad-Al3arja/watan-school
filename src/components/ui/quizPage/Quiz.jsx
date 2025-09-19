@@ -15,18 +15,18 @@ import {
   recordLastScore,
 } from "@/components/util/quizStorage";
 
-// 1) IMPORT your quizData. Adjust the path if needed
-import quizData from "@/pages/data.json";
+// 1) IMPORT custom hooks for fetching data from Supabase
+import { useQuizData, useQuestions } from "@/hooks/useQuizData";
 
 // 2) A small helper component to show a horizontally scrollable bar
-function QuizNumbersBar({ qType, type, currentQuizNumber }) {
+function QuizNumbersBar({ qType, type, currentQuizNumber, quizData }) {
   const router = useRouter();
 
   // Hide the bar if we're on the "random" route
   if (currentQuizNumber === "random") return null;
 
   // Safely get all quiz numbers for this qType/type
-  const quizNumbersObject = quizData[qType]?.[type];
+  const quizNumbersObject = quizData?.[qType]?.[type];
   if (!quizNumbersObject) return null;
 
   // Turn the object keys (quiz numbers) into an array
@@ -70,42 +70,38 @@ function QuizNumbersBar({ qType, type, currentQuizNumber }) {
 const MemoizedQuestion = React.memo(QuestionComponent);
 const MemoizedNavigation = React.memo(QuestionNavigation);
 
-export default function Quiz({ qType, type, quizNumber, quiz }) {
+export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizContentUpdate }) {
   const router = useRouter();
   const questionTitleRef = useRef(null);
   const headerHeight = 100;
 
-  // --- Local states ---
-  const [autoNext, setAutoNext] = useState(false);
-
-  // We do NOT store `quiz` in state; we’ll refer directly to the quiz prop
+  // Simple state management without progress persistence
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState([]);
-  const [visited, setVisited] = useState([]);
+  const [visited, setVisited] = useState([0]);
   const [timeLeft, setTimeLeft] = useState(40 * 60);
+  const [showAnswers, setShowAnswers] = useState([]);
+  const [wrongRecordedQuestions, setWrongRecordedQuestions] = useState(new Set());
   const [scoreModalOpen, setScoreModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [showAnswers, setShowAnswers] = useState([]);
-  const [wrongRecordedQuestions, setWrongRecordedQuestions] = useState(
-    new Set()
-  );
+  const [autoNext, setAutoNext] = useState(false);
 
-  // Whenever `quiz` changes (meaning user navigated to a new quiz number),
-  // reset all relevant states:
+  // Initialize state when quiz changes
   useEffect(() => {
-    if (!quiz) return;
-
-    setUserAnswers(Array(quiz.length).fill(null));
-    setVisited([0]);
-    setTimeLeft(40 * 60);
-    setScoreModalOpen(false);
-    setModalOpen(false);
-    setShowAnswers(Array(quiz.length).fill(false));
-    setWrongRecordedQuestions(new Set());
-    setCurrentIndex(0);
+    if (quiz && quiz.length > 0) {
+      setCurrentIndex(0);
+      setUserAnswers(Array(quiz.length).fill(null));
+      setVisited([0]);
+      setTimeLeft(40 * 60);
+      setShowAnswers(Array(quiz.length).fill(false));
+      setWrongRecordedQuestions(new Set());
+      setScoreModalOpen(false);
+      setModalOpen(false);
+      setAutoNext(false);
+    }
   }, [quiz]);
 
-  // Mark the current question as visited whenever it changes
+  // Mark current question as visited
   useEffect(() => {
     setVisited((prev) =>
       prev.includes(currentIndex) ? prev : [...prev, currentIndex]
@@ -171,7 +167,7 @@ export default function Quiz({ qType, type, quizNumber, quiz }) {
           );
           newWrongKeys.push(key);
         } catch (err) {
-          console.error("Error recording wrong answer:", err);
+          // Error recording wrong answer
         }
       }
     }
@@ -189,7 +185,7 @@ export default function Quiz({ qType, type, quizNumber, quiz }) {
   // Go to next question, or finish if this is the last
   const handleNext = useCallback(() => {
     if (currentIndex < quiz.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
+      setCurrentIndex(currentIndex + 1);
       scrollToQuestion();
     } else {
       setTimeout(() => {
@@ -253,7 +249,7 @@ export default function Quiz({ qType, type, quizNumber, quiz }) {
         );
         setWrongRecordedQuestions((prev) => new Set([...prev, key]));
       } catch (err) {
-        console.error("Error recording wrong answer:", err);
+        // Error recording wrong answer
       }
     }
     if (autoNext && currentIndex < quiz.length - 1) {
@@ -273,14 +269,15 @@ export default function Quiz({ qType, type, quizNumber, quiz }) {
 
   // Restart the quiz
   const handleRestart = useCallback(() => {
+    setCurrentIndex(0);
     setUserAnswers(Array(quiz.length).fill(null));
     setVisited([0]);
     setTimeLeft(40 * 60);
-    setScoreModalOpen(false);
-    setModalOpen(false);
     setShowAnswers(Array(quiz.length).fill(false));
     setWrongRecordedQuestions(new Set());
-    setCurrentIndex(0);
+    setScoreModalOpen(false);
+    setModalOpen(false);
+    setAutoNext(false);
   }, [quiz]);
 
   // Map type keys to user-friendly names
@@ -318,12 +315,13 @@ export default function Quiz({ qType, type, quizNumber, quiz }) {
         qType={qType}
         type={type}
         currentQuizNumber={quizNumber}
+        quizData={quizData}
       />
 
       <Box sx={{ maxWidth: 1000, mx: "auto", mt: 4, p: 2 }}>
         <ProgressBar
           questionTitleRef={questionTitleRef}
-          answeredQuestions={userAnswers.filter(Boolean).length}
+          answeredQuestions={userAnswers.filter(answer => answer !== null && answer !== undefined && answer.answer).length}
           total={quiz.length}
           timeLeft={timeLeft}
           autoNext={autoNext}
@@ -449,6 +447,7 @@ export default function Quiz({ qType, type, quizNumber, quiz }) {
             />
           </Box>
         </Box>
+
 
         {/* Time Up Modal */}
         <TimeUpModal
