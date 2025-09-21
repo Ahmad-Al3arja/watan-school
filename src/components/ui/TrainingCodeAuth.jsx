@@ -11,9 +11,10 @@ import {
   Container
 } from '@mui/material';
 import { Lock as LockIcon } from '@mui/icons-material';
+import { supabase } from '../../../lib/supabase';
 
 const TrainingCodeAuth = ({ onAuthenticated }) => {
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState('ADMIN123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,24 +29,48 @@ const TrainingCodeAuth = ({ onAuthenticated }) => {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/training-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code: code.trim() }),
-      });
+      // Use Supabase validation for both web and mobile
+      const trimmedCode = code.trim().toUpperCase();
 
-      const data = await response.json();
+      const { data: codeData, error: codeError } = await supabase
+        .from('training_codes')
+        .select('*')
+        .eq('code', trimmedCode)
+        .eq('is_active', true)
+        .single();
 
-      if (response.ok) {
-        // Store the token in localStorage
-        localStorage.setItem('trainingToken', data.token);
-        localStorage.setItem('trainingTokenExpiry', (Date.now() + 24 * 60 * 60 * 1000).toString()); // 24 hours
-        onAuthenticated();
-      } else {
-        setError(data.error || 'رمز غير صحيح');
+      if (codeError || !codeData) {
+        setError('رمز غير صحيح');
+        return;
       }
+
+      // Check if code is expired
+      if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
+        setError('هذا الرمز منتهي الصلاحية');
+        return;
+      }
+
+      // Check if code has reached max uses
+      if (codeData.max_uses && codeData.current_uses >= codeData.max_uses) {
+        setError('تم استنفاد عدد استخدامات هذا الرمز');
+        return;
+      }
+
+      // Update usage count
+      const { error: updateError } = await supabase
+        .from('training_codes')
+        .update({ current_uses: codeData.current_uses + 1 })
+        .eq('id', codeData.id);
+
+      if (updateError) {
+        console.error('Error updating code usage:', updateError);
+      }
+
+      // Store the token in localStorage
+      const sessionToken = Buffer.from(`training_${trimmedCode}_${Date.now()}`).toString('base64');
+      localStorage.setItem('trainingToken', sessionToken);
+      localStorage.setItem('trainingTokenExpiry', (Date.now() + 24 * 60 * 60 * 1000).toString()); // 24 hours
+      onAuthenticated();
     } catch (err) {
       setError('حدث خطأ في الاتصال');
     } finally {

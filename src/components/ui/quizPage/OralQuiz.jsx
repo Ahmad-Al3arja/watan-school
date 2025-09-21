@@ -15,6 +15,7 @@ import {
   recordWrongAnswerTypeLevel,
   recordLastScore,
 } from "@/components/util/quizStorage";
+import tts from "@/components/util/textToSpeech";
 
 // 1) IMPORT your quizData. Adjust the path if needed
 import quizData from "@/pages/data.json";
@@ -111,15 +112,14 @@ export default function OralQuiz({ qType, type, quizNumber, quiz }) {
 
   // TTS specific states
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speechSynthesis, setSpeechSynthesis] = useState(null);
 
-  // Initialize speech synthesis
+  // Initialize TTS
   useEffect(() => {
-    if ('speechSynthesis' in window) {
-      setSpeechSynthesis(window.speechSynthesis);
-    }
+    tts.setStateChangeCallback(setIsPlaying);
+    return () => {
+      tts.stop();
+    };
   }, []);
-
 
   // Timer logic – counts down every second and shows "Time Up" modal when finished
   useEffect(() => {
@@ -138,40 +138,11 @@ export default function OralQuiz({ qType, type, quizNumber, quiz }) {
   }, [quiz]);
 
   // TTS Functions
-  const speakText = (text) => {
-    if (!speechSynthesis) return;
-    
-    speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ar-SA';
-    utterance.rate = 0.8;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-    
-    utterance.onstart = () => setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => setIsPlaying(false);
-    
-    speechSynthesis.speak(utterance);
-  };
-
-  const stopSpeech = () => {
-    if (speechSynthesis) {
-      speechSynthesis.cancel();
-      setIsPlaying(false);
-    }
-  };
-
-  const toggleAudio = () => {
-    if (isPlaying) {
-      stopSpeech();
-    } else {
-      const currentQuestion = quiz[currentIndex];
-      if (currentQuestion) {
-        const textToSpeak = `${currentQuestion.question} ${currentQuestion.a} ${currentQuestion.b || ''}`;
-        speakText(textToSpeak);
-      }
+  const toggleAudio = async () => {
+    const currentQuestion = quiz[currentIndex];
+    if (currentQuestion) {
+      const textToSpeak = `${currentQuestion.question} ${currentQuestion.a} ${currentQuestion.b || ''}`;
+      await tts.toggle(textToSpeak);
     }
   };
 
@@ -236,7 +207,7 @@ export default function OralQuiz({ qType, type, quizNumber, quiz }) {
     if (currentIndex < quiz.length - 1) {
       setCurrentIndex(currentIndex + 1);
       // Removed scrollToQuestion() call to prevent jumping
-      stopSpeech();
+      tts.stop();
     } else {
       setTimeout(() => {
         handleFinish();
@@ -249,7 +220,7 @@ export default function OralQuiz({ qType, type, quizNumber, quiz }) {
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
       // Removed scrollToQuestion() call to prevent jumping
-      stopSpeech();
+      tts.stop();
     }
   }, [currentIndex, scrollToQuestion]);
 
@@ -512,7 +483,7 @@ export default function OralQuiz({ qType, type, quizNumber, quiz }) {
               onNavigate={(index) => {
                 setCurrentIndex(index);
                 // Removed scrollToQuestion() call to prevent jumping
-                stopSpeech();
+                tts.stop();
               }}
             />
           </Box>

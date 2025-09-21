@@ -27,6 +27,7 @@ export const navigationData = [
     subMenu: [
       { title: "اشارات المرور", path: "/st/signals" },
       { title: "كتاب التؤوريا", path: "/st/book" },
+      { title: "الإشارات على الشارع", path: "/st/street-signs" },
     ],
   },
   {

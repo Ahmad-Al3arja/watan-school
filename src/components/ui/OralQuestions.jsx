@@ -24,6 +24,7 @@ import QuestionComponent from "@/components/ui/quizPage/Question";
 import QuestionNavigation from "@/components/ui/quizPage/QuestionNavigation";
 import { typesData } from "@/components/data/typesData";
 import { useQuizData } from "@/hooks/useQuizData";
+import tts from "@/components/util/textToSpeech";
 
 // Quiz Numbers Bar Component (same as cTeoria)
 function QuizNumbersBar({ selectedType, currentQuizNumber, onQuizNumberChange, quizData }) {
@@ -77,7 +78,6 @@ export default function OralQuestions() {
   const [visited, setVisited] = useState([]);
   const [showAnswers, setShowAnswers] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speechSynthesis, setSpeechSynthesis] = useState(null);
   const [isClient, setIsClient] = useState(false);
 
   // Ensure we're on the client side
@@ -85,11 +85,12 @@ export default function OralQuestions() {
     setIsClient(true);
   }, []);
 
-  // Initialize speech synthesis
+  // Initialize TTS
   useEffect(() => {
-    if ('speechSynthesis' in window) {
-      setSpeechSynthesis(window.speechSynthesis);
-    }
+    tts.setStateChangeCallback(setIsPlaying);
+    return () => {
+      tts.stop();
+    };
   }, []);
 
   // Load questions when type or quiz number changes
@@ -115,40 +116,11 @@ export default function OralQuestions() {
   }, [currentIndex]);
 
   // TTS Functions
-  const speakText = (text) => {
-    if (!speechSynthesis) return;
-
-    speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ar-SA';
-    utterance.rate = 0.8;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-
-    utterance.onstart = () => setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => setIsPlaying(false);
-
-    speechSynthesis.speak(utterance);
-  };
-
-  const stopSpeech = () => {
-    if (speechSynthesis) {
-      speechSynthesis.cancel();
-    }
-    setIsPlaying(false);
-  };
-
-  const toggleAudio = () => {
-    if (isPlaying) {
-      stopSpeech();
-    } else {
-      const currentQuestion = quiz[currentIndex];
-      if (currentQuestion) {
-        const textToSpeak = `${currentQuestion.question} ${currentQuestion.a} ${currentQuestion.b || ''}`;
-        speakText(textToSpeak);
-      }
+  const toggleAudio = async () => {
+    const currentQuestion = quiz[currentIndex];
+    if (currentQuestion) {
+      const textToSpeak = `${currentQuestion.question} ${currentQuestion.a} ${currentQuestion.b || ''}`;
+      await tts.toggle(textToSpeak);
     }
   };
 
@@ -174,8 +146,8 @@ export default function OralQuestions() {
 
   const handleQuizNumberChange = useCallback((number) => {
     setCurrentQuizNumber(number);
-    stopSpeech();
-  }, [stopSpeech]);
+    tts.stop();
+  }, []);
 
   const handleAnswerSelect = useCallback((answer) => {
     setUserAnswers((prev) => {
@@ -195,16 +167,16 @@ export default function OralQuestions() {
 
   const handleQuestionClick = useCallback((index) => {
     setCurrentIndex(index);
-    stopSpeech();
+    tts.stop();
     // Removed setTimeout(scrollToQuestion, 100) to prevent jumping
-  }, [stopSpeech]);
+  }, []);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopSpeech();
-    };
-  }, [stopSpeech]);
+  // Cleanup on unmount (already handled in TTS initialization effect)
+  // useEffect(() => {
+  //   return () => {
+  //     tts.stop();
+  //   };
+  // }, []);
 
   if (!isClient) {
     return (
