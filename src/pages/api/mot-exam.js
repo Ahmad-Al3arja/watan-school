@@ -163,11 +163,17 @@ export default async function handler(req, res) {
     const tableMatch = resultHtml.match(/<table[^>]*id="Table1"[^>]*>(.*?)<\/table>/is);
 
     if (!tableMatch) {
+      console.log('\n=== NO MOT RESULTS FOUND ===');
+      console.log(`Search ID: ${searchId}`);
       console.log('No table found in results');
+      console.log('\n--- Full Result HTML (first 2000 chars) ---');
+      console.log(resultHtml.substring(0, 2000));
+      
       // Check if there's an error message in the response
       const errorMatch = resultHtml.match(/<span[^>]*class="danger"[^>]*>(.*?)<\/span>/is);
       if (errorMatch) {
         console.log('Error message found:', errorMatch[1]);
+        console.log('=== END NO RESULTS ===\n');
         return res.status(200).json({
           success: true,
           found: false,
@@ -175,6 +181,7 @@ export default async function handler(req, res) {
         });
       }
       
+      console.log('=== END NO RESULTS ===\n');
       return res.status(200).json({
         success: true,
         found: false,
@@ -216,6 +223,20 @@ export default async function handler(req, res) {
     }
 
     console.log(`Successfully parsed ${rows.length} data rows`);
+    
+    // Print detailed results to console
+    console.log('\n=== MOT EXAM RESULTS ===');
+    console.log(`Search ID: ${searchId}`);
+    console.log(`Total rows found: ${rows.length}`);
+    console.log('\n--- Parsed Data ---');
+    rows.forEach((row, index) => {
+      console.log(`${index + 1}. ${row[0]}: ${row[1]}`);
+    });
+    console.log('\n--- Raw HTML Table Content ---');
+    console.log(tableContent);
+    console.log('\n--- Full Result HTML (first 2000 chars) ---');
+    console.log(resultHtml.substring(0, 2000));
+    console.log('=== END MOT RESULTS ===\n');
 
     // Return successful result
     return res.status(200).json({

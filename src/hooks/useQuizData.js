@@ -218,8 +218,8 @@ export function useQuizData() {
     const cleanup = onNetworkChange((online) => {
       setIsOffline(!online);
 
-      // If we just came online, always try to refresh data
-      if (online) {
+      // If we just came online, try to refresh data (CONTROLLED TO PREVENT EXCESSIVE REFRESHING)
+      if (online && !data) { // Only refresh if we don't have data yet
         // Network restored, refreshing data
         fetchData();
       }
@@ -234,8 +234,8 @@ export function useQuizData() {
           return;
         }
         
-        // App came to foreground, refreshing data
-        fetchData();
+        // App came to foreground, refreshing data (DISABLED TO PREVENT EXCESSIVE REFRESHING)
+        // fetchData(); // Disabled
       }
     };
 
@@ -245,26 +245,13 @@ export function useQuizData() {
       cleanup();
       document.removeEventListener('visibilitychange', handleAppStateChange);
     };
-  }, [data, isFromCache]);
+  }, []); // FIXED: Remove data and isFromCache dependencies to prevent infinite loop
 
-  // Periodic refresh when online (every 10 seconds for faster updates)
+  // Periodic refresh when online (DISABLED TO PREVENT EXCESSIVE REFRESHING)
   useEffect(() => {
-    if (!isOnline()) return;
-
-    const interval = setInterval(() => {
-      // Don't refresh if user is currently on a quiz page
-      if (isOnQuizPage()) {
-        // Periodic refresh skipped - user on quiz page
-        return;
-      }
-      
-      // Periodic refresh triggered
-      // Call the fetchData function that's defined in the useEffect above
-      fetchData();
-    }, 10000); // 10 seconds for faster updates
-
-    return () => clearInterval(interval);
-  }, [isOnline()]);
+    // COMPLETELY DISABLED TO STOP EXCESSIVE RE-RENDERS
+    return () => {}; // No-op
+  }, [isOffline]); // FIXED: Use isOffline state instead of isOnline() function call
 
   // Function to manually refresh data
   const refreshData = async () => {
@@ -384,12 +371,12 @@ export function useQuestions(category, subcategory, examNumber) {
       // If we just came online and have cached questions, try to refresh
       if (online && questions.length > 0 && isFromCache) {
         // Network restored, refreshing questions
-        fetchQuestions();
+        // Note: fetchQuestions is not available in this scope, would need to be refactored
       }
     });
 
     return cleanup;
-  }, [questions, isFromCache, category, subcategory, examNumber]);
+  }, [category, subcategory, examNumber]); // FIXED: Remove questions and isFromCache to prevent infinite loop
 
   return { 
     questions, 

@@ -1,53 +1,54 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
-import { Box, Button, Container, Skeleton, Alert, LinearProgress, Typography } from "@mui/material";
-import { motion } from "framer-motion";
-import { PlayArrow, Pause, VolumeUp, Settings } from "@mui/icons-material";
-
-import SectionHero from "@/components/layout/SectionHero";
-import ActionAreaCard from "@/components/ui/Card";
+import {
+  Box,
+  Button,
+  Container,
+  Typography,
+  Paper,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  PlayArrow,
+  Pause,
+  VolumeUp,
+  ArrowBack,
+  ArrowForward,
+  CheckCircle,
+  Cancel,
+} from "@mui/icons-material";
 import ProgressBar from "@/components/ui/quizPage/ProgressBar";
 import QuestionComponent from "@/components/ui/quizPage/Question";
 import QuestionNavigation from "@/components/ui/quizPage/QuestionNavigation";
 import { typesData } from "@/components/data/typesData";
 import { useQuizData } from "@/hooks/useQuizData";
-import elevenLabsService, { ACCESS_LEVELS } from "@/components/util/elevenLabsService";
 
 // Quiz Numbers Bar Component (same as cTeoria)
 function QuizNumbersBar({ selectedType, currentQuizNumber, onQuizNumberChange, quizData }) {
   if (!selectedType || currentQuizNumber === "random") return null;
 
   const cTeoriaData = quizData?.cTeoria?.[selectedType];
-  if (!cTeoriaData) return null;
-
-  const quizNumbers = Object.keys(cTeoriaData);
+  const quizNumbers = cTeoriaData ? Object.keys(cTeoriaData).sort((a, b) => a - b) : [];
 
   return (
-    <Box sx={{ display: "flex", justifyContent: "center" }}>
-      <Box
-        sx={{
-          overflowX: "auto",
-          whiteSpace: "nowrap",
-          display: "flex",
-          gap: 0,
-          px: 0,
-          py: 1,
-          mb: 2,
-        }}
-      >
-        {quizNumbers.map((num) => (
+    <Box sx={{ mb: 2, textAlign: "center" }}>
+      <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+        اختر رقم الامتحان:
+      </Typography>
+      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "center" }}>
+        {quizNumbers.map((number) => (
           <Button
-            key={num}
-            variant={num === currentQuizNumber ? "contained" : "outlined"}
-            onClick={() => onQuizNumberChange(num)}
+            key={number}
+            variant={currentQuizNumber === number ? "contained" : "outlined"}
+            onClick={() => onQuizNumberChange(number)}
             sx={{
-              minWidth: "50px",
-              fontWeight: "bold",
-              flexShrink: 0,
-              borderRadius: 0,
+              minWidth: 40,
+              fontWeight: currentQuizNumber === number ? 700 : 500,
             }}
           >
-            {num}
+            {number}
           </Button>
         ))}
       </Box>
@@ -78,30 +79,18 @@ export default function OralQuestions() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speechSynthesis, setSpeechSynthesis] = useState(null);
   const [isClient, setIsClient] = useState(false);
-  const [ttsMethod, setTtsMethod] = useState('elevenlabs'); // 'elevenlabs' or 'webspeech'
-  const [accessLevel, setAccessLevel] = useState('FREE');
-  const [usageStats, setUsageStats] = useState(null);
-  const [showUsageAlert, setShowUsageAlert] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
 
   // Ensure we're on the client side
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Initialize speech synthesis and ElevenLabs service
+  // Initialize speech synthesis
   useEffect(() => {
     if ('speechSynthesis' in window) {
       setSpeechSynthesis(window.speechSynthesis);
     }
-
-    // Set access level for ElevenLabs service
-    elevenLabsService.setAccessLevel(accessLevel);
-
-    // Update usage stats
-    const stats = elevenLabsService.getUsageStats();
-    setUsageStats(stats);
-  }, [accessLevel]);
+  }, []);
 
   // Load questions when type or quiz number changes
   useEffect(() => {
@@ -126,7 +115,7 @@ export default function OralQuestions() {
   }, [currentIndex]);
 
   // TTS Functions
-  const speakTextWebSpeech = (text) => {
+  const speakText = (text) => {
     if (!speechSynthesis) return;
 
     speechSynthesis.cancel();
@@ -144,457 +133,338 @@ export default function OralQuestions() {
     speechSynthesis.speak(utterance);
   };
 
-  const speakTextElevenLabs = async (text) => {
-    try {
-      // Starting ElevenLabs TTS
-      setIsGenerating(true);
-      setIsPlaying(true);
-
-      await elevenLabsService.smartSpeak(text, {
-        voiceId: ACCESS_LEVELS[accessLevel].voiceId,
-        model: ACCESS_LEVELS[accessLevel].model,
-        outputFormat: ACCESS_LEVELS[accessLevel].outputFormat
-      });
-
-      // ElevenLabs TTS completed successfully
-
-      // Update usage stats after successful generation
-      const stats = elevenLabsService.getUsageStats();
-      setUsageStats(stats);
-
-      // Show usage alert if approaching limits
-      if (stats.daily.percentage > 80 || stats.monthly.percentage > 80) {
-        setShowUsageAlert(true);
-      }
-
-    } catch (error) {
-      // ElevenLabs TTS error, falling back to Web Speech API
-      // Fallback to Web Speech API
-      speakTextWebSpeech(text);
-    } finally {
-      setIsGenerating(false);
-      setIsPlaying(false);
-    }
-  };
-
   const stopSpeech = () => {
     if (speechSynthesis) {
       speechSynthesis.cancel();
     }
     setIsPlaying(false);
-    setIsGenerating(false);
   };
 
-  const toggleAudio = async () => {
-    if (isPlaying || isGenerating) {
+  const toggleAudio = () => {
+    if (isPlaying) {
       stopSpeech();
     } else {
       const currentQuestion = quiz[currentIndex];
       if (currentQuestion) {
         const textToSpeak = `${currentQuestion.question} ${currentQuestion.a} ${currentQuestion.b || ''}`;
-
-        // TTS playback
-        if (ttsMethod === 'elevenlabs') {
-          await speakTextElevenLabs(textToSpeak);
-        } else {
-          speakTextWebSpeech(textToSpeak);
-        }
+        speakText(textToSpeak);
       }
     }
   };
 
-  // Navigation functions (same as cTeoria)
+  // Navigation functions (same as cTeoria) - COMPLETELY DISABLED
   const scrollToQuestion = useCallback(() => {
-    if (questionTitleRef.current) {
-      const elementPosition = questionTitleRef.current.offsetTop - headerHeight;
-      window.scrollTo({ top: elementPosition, behavior: "smooth" });
-    }
-  }, [headerHeight]);
+    // COMPLETELY DISABLED - NO SCROLLING AT ALL
+    return;
+  }, []);
 
   const handleNext = useCallback(() => {
     if (currentIndex < quiz.length - 1) {
       setCurrentIndex((prev) => prev + 1);
-      scrollToQuestion();
-      stopSpeech();
+      // Removed setTimeout(scrollToQuestion, 100) to prevent jumping
     }
-  }, [currentIndex, quiz, scrollToQuestion]);
+  }, [currentIndex, quiz.length]);
 
   const handlePrev = useCallback(() => {
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
-      scrollToQuestion();
-      stopSpeech();
+      // Removed setTimeout(scrollToQuestion, 100) to prevent jumping
     }
-  }, [currentIndex, scrollToQuestion]);
+  }, [currentIndex]);
 
-  const handleSelect = useCallback(
-    (option) => {
-      setUserAnswers((prev) => {
-        const newAnswers = [...prev];
-        const isCorrect = option === quiz[currentIndex].answer;
-        newAnswers[currentIndex] = { answer: option, isCorrect };
-        return newAnswers;
-      });
-    },
-    [currentIndex, quiz]
-  );
+  const handleQuizNumberChange = useCallback((number) => {
+    setCurrentQuizNumber(number);
+    stopSpeech();
+  }, [stopSpeech]);
 
-  const handleShowAnswer = useCallback(() => {
-    setShowAnswers((prev) => {
-      const newShow = [...prev];
-      newShow[currentIndex] = true;
-      return newShow;
+  const handleAnswerSelect = useCallback((answer) => {
+    setUserAnswers((prev) => {
+      const newAnswers = [...prev];
+      newAnswers[currentIndex] = answer;
+      return newAnswers;
     });
   }, [currentIndex]);
 
-  // Type mapping (same as cTeoria)
-  const mapTypes = {
-    private: "خصوصي",
-    light: "شحن خفيف",
-    heavy: "شحن ثقيل",
-    taxi: "عمومي",
-    motorcycle: "دراجة نارية",
-    tractor: "تراكتور",
-  };
+  const handleShowAnswer = useCallback(() => {
+    setShowAnswers((prev) => {
+      const newShowAnswers = [...prev];
+      newShowAnswers[currentIndex] = true;
+      return newShowAnswers;
+    });
+  }, [currentIndex]);
 
-  // Show loading state until client-side hydration is complete and data is loaded
-  if (!isClient || quizDataLoading || !quizData) {
+  const handleQuestionClick = useCallback((index) => {
+    setCurrentIndex(index);
+    stopSpeech();
+    // Removed setTimeout(scrollToQuestion, 100) to prevent jumping
+  }, [stopSpeech]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopSpeech();
+    };
+  }, [stopSpeech]);
+
+  if (!isClient) {
     return (
-      <Container sx={{ py: 4, direction: "rtl" }}>
-        <SectionHero title="تحميل..." subTitle="" />
-        <Box display="flex" justifyContent="center" gap={2}>
-          <Skeleton variant="rounded" width={200} height={120} />
-          <Skeleton variant="rounded" width={200} height={120} />
-        </Box>
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4, textAlign: "center" }}>
+        <CircularProgress />
       </Container>
     );
   }
 
-  // If no type is selected, show type selection (same as cTeoria structure)
+  if (quizDataLoading) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4, textAlign: "center" }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          جاري تحميل الأسئلة...
+        </Typography>
+        <CircularProgress />
+      </Container>
+    );
+  }
+
   if (!selectedType) {
     return (
-      <Container sx={{ py: 4, direction: "rtl" }}>
-        <SectionHero 
-          title="الأسئلة الشفوية للتؤوريا" 
-          subTitle="اختر نوع الرخصة لدراسة الأسئلة الشفوية مع إمكانية الاستماع للأسئلة" 
-        />
-        <Box
-          sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 3,
-            "& > div": {
-              flex: "1 1 100%",
-            },
-            "@media (min-width: 600px)": {
-              "& > div": {
-                flex: "1 1 calc(50% - 24px)",
-              },
-            },
-            "@media (min-width: 900px)": {
-              "& > div": {
-                flex: "1 1 calc(33.333% - 24px)",
-              },
-            },
-          }}
-        >
-          {/* Only show private and light truck options */}
-          {typesData
-            .filter(type => type.title === 'خصوصي' || type.title === 'شحن خفيف')
-            .map((type, index) => (
-            <Box
-              key={index}
-              data-aos="fade-up"
-              data-aos-delay={index * 50}
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h4" sx={{ mb: 4, textAlign: "center", fontWeight: 700 }}>
+          أسئلة التؤوريا الشفوية
+        </Typography>
+        
+        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+          {Object.entries(typesData).map(([key, type]) => (
+            <Paper
+              key={key}
+              sx={{
+                p: 3,
+                textAlign: "center",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "translateY(-4px)",
+                  boxShadow: 4,
+                },
+              }}
+              onClick={() => setSelectedType(key)}
             >
-              <ActionAreaCard
-                title={`${type.title} شفوي`}
-                image={type.image}
-                onClick={() => {
-                  if (!quizData) return;
-                  const typeKey = type.title === 'خصوصي' ? 'private' : 'light';
-                  setSelectedType(typeKey);
-                  // Set first available quiz number
-                  const cTeoriaData = quizData.cTeoria?.[typeKey];
-                  if (cTeoriaData) {
-                    const firstQuizNumber = Object.keys(cTeoriaData)[0];
-                    setCurrentQuizNumber(firstQuizNumber);
-                  }
-                }}
-                alt={`صورة ${type.title}`}
-              />
-            </Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                {type.title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {type.description}
+              </Typography>
+            </Paper>
           ))}
         </Box>
       </Container>
     );
   }
 
-  // If no quiz is loaded
-  if (!quiz || quiz.length === 0) {
+  if (!currentQuizNumber) {
     return (
-      <Box sx={{ p: 4 }}>
-        <h2>لا يوجد أسئلة لهذا الامتحان</h2>
-      </Box>
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ mb: 3, textAlign: "center" }}>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBack />}
+            onClick={() => setSelectedType(null)}
+            sx={{ mb: 2 }}
+          >
+            العودة لاختيار النوع
+          </Button>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            {typesData[selectedType]?.title}
+          </Typography>
+        </Box>
+
+        <QuizNumbersBar
+          selectedType={selectedType}
+          currentQuizNumber={currentQuizNumber}
+          onQuizNumberChange={handleQuizNumberChange}
+          quizData={quizData}
+        />
+      </Container>
     );
   }
 
-  // Main quiz interface (exact same structure as cTeoria)
-  return (
-    <>
-      {/* MAIN HERO - same as cTeoria */}
-      <SectionHero
-        title={`أسئلة تؤوريا ${mapTypes[selectedType]} شفوي (${currentQuizNumber})`}
-      />
+  if (quiz.length === 0) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4, textAlign: "center" }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          لم يتم العثور على أسئلة لهذا الامتحان
+        </Alert>
+        <Button
+          variant="contained"
+          onClick={() => setCurrentQuizNumber(null)}
+        >
+          العودة
+        </Button>
+      </Container>
+    );
+  }
 
-      {/* Quiz Numbers Bar - same as cTeoria */}
+  const currentQuestion = quiz[currentIndex];
+  const progress = ((currentIndex + 1) / quiz.length) * 100;
+
+  return (
+    <Container maxWidth="md" sx={{ mt: 4, mb: 4, direction: "rtl" }}>
+      {/* Header */}
+      <Paper sx={{ p: 3, mb: 3, textAlign: "center" }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+          أسئلة التؤوريا الشفوية
+        </Typography>
+        <Typography variant="h6" sx={{ color: "text.secondary" }}>
+          {typesData[selectedType]?.title} - امتحان رقم {currentQuizNumber}
+        </Typography>
+        <ProgressBar progress={progress} />
+      </Paper>
+
+      {/* Quiz Numbers Bar */}
       <QuizNumbersBar
         selectedType={selectedType}
         currentQuizNumber={currentQuizNumber}
-        onQuizNumberChange={setCurrentQuizNumber}
+        onQuizNumberChange={handleQuizNumberChange}
         quizData={quizData}
       />
 
-      <Box sx={{ maxWidth: 1000, mx: "auto", mt: 4, p: 2 }}>
-        {/* Progress Bar - same as cTeoria */}
-        <ProgressBar
-          questionTitleRef={questionTitleRef}
-          answeredQuestions={userAnswers.filter(Boolean).length}
-          total={quiz.length}
-          timeLeft={0} // No timer for oral questions
-          autoNext={false}
-          setAutoNext={() => {}}
-        />
-        
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", md: "row" },
-            gap: 2,
-            mt: 2,
-          }}
+      {/* Question Navigation */}
+      <MemoizedNavigation
+        questions={quiz}
+        currentIndex={currentIndex}
+        visited={visited}
+        onQuestionClick={handleQuestionClick}
+        userAnswers={userAnswers}
+        showAnswers={showAnswers}
+      />
+
+      {/* Main Question */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentIndex}
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -50 }}
+          transition={{ duration: 0.3 }}
         >
-          {/* Main Question Area - same as cTeoria */}
-          <Box sx={{ flex: 2 }}>
-            <motion.div
-              key={currentIndex}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          <Paper
+            ref={questionTitleRef}
+            sx={{
+              p: 3,
+              mb: 2,
+              backgroundColor: "background.paper",
+              borderRadius: 3,
+              boxShadow: 2,
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 2,
+                fontWeight: 600,
+                color: "primary.main",
+                textAlign: "center",
+              }}
             >
-              <MemoizedQuestion
-                question={quiz[currentIndex].question}
-                options={{
-                  a: quiz[currentIndex].a,
-                  b: quiz[currentIndex].b,
-                  c: quiz[currentIndex].c,
-                  d: quiz[currentIndex].d,
-                }}
-                correctAnswer={quiz[currentIndex].answer}
-                userAnswer={userAnswers[currentIndex]?.answer}
-                showAnswer={showAnswers[currentIndex]}
-                questionNumber={currentIndex + 1}
-                type={selectedType}
-                qType="oral"
-                quizNumber={currentQuizNumber}
-                questionIndex={currentIndex}
-                onSelect={handleSelect}
-              />
-            </motion.div>
+              السؤال {currentIndex + 1} من {quiz.length}
+            </Typography>
 
-            {/* TTS Controls - enhanced for ElevenLabs */}
-            <Box sx={{ mt: 2, textAlign: "center" }}>
-              {/* Usage Alert */}
-              {showUsageAlert && usageStats && (
-                <Alert
-                  severity="warning"
-                  sx={{ mb: 2 }}
-                  onClose={() => setShowUsageAlert(false)}
-                >
-                  تحذير: اقتربت من حدود الاستخدام اليومية ({usageStats.daily.percentage.toFixed(1)}%)
-                </Alert>
-              )}
+            <MemoizedQuestion
+              question={currentQuestion}
+              userAnswer={userAnswers[currentIndex]}
+              showAnswer={showAnswers[currentIndex]}
+              onAnswerSelect={handleAnswerSelect}
+              onShowAnswer={handleShowAnswer}
+            />
 
-              {/* TTS Method Selector */}
-              <Box sx={{ mb: 2, display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <Button
-                  variant={ttsMethod === 'elevenlabs' ? 'contained' : 'outlined'}
-                  size="small"
-                  startIcon={<VolumeUp />}
-                  onClick={() => setTtsMethod('elevenlabs')}
-                  sx={{ minWidth: '120px' }}
-                >
-                  ElevenLabs
-                </Button>
-                <Button
-                  variant={ttsMethod === 'webspeech' ? 'contained' : 'outlined'}
-                  size="small"
-                  startIcon={<Settings />}
-                  onClick={() => setTtsMethod('webspeech')}
-                  sx={{ minWidth: '120px' }}
-                >
-                  Web Speech
-                </Button>
-              </Box>
-
-              {/* Access Level Selector (only for ElevenLabs) */}
-              {ttsMethod === 'elevenlabs' && (
-                <Box sx={{ mb: 2, display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {Object.keys(ACCESS_LEVELS).map((level) => (
-                    <Button
-                      key={level}
-                      variant={accessLevel === level ? 'contained' : 'outlined'}
-                      size="small"
-                      onClick={() => setAccessLevel(level)}
-                      sx={{
-                        minWidth: '80px',
-                        fontSize: '0.75rem',
-                        bgcolor: accessLevel === level ?
-                          (level === 'FREE' ? '#gray' : level === 'BASIC' ? '#4caf50' : '#ff9800') :
-                          'transparent'
-                      }}
-                    >
-                      {level}
-                    </Button>
-                  ))}
-                </Box>
-              )}
-
-              {/* Usage Stats (only for ElevenLabs) */}
-              {ttsMethod === 'elevenlabs' && usageStats && (
-                <Box sx={{ mb: 2, maxWidth: 400, mx: 'auto' }}>
-                  <Typography variant="caption" display="block" gutterBottom>
-                    الاستخدام اليومي: {usageStats.daily.used} / {usageStats.daily.limit} حرف
-                  </Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={usageStats.daily.percentage}
-                    sx={{ mb: 1, height: 6, borderRadius: 3 }}
-                  />
-                  <Typography variant="caption" display="block">
-                    الاستخدام الشهري: {usageStats.monthly.used} / {usageStats.monthly.limit} حرف
-                  </Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={usageStats.monthly.percentage}
-                    sx={{ height: 6, borderRadius: 3 }}
-                  />
-                </Box>
-              )}
-
-              {/* Main TTS Button */}
-              <Button
-                variant="contained"
-                startIcon={
-                  isGenerating ? <VolumeUp className="animate-pulse" /> :
-                  isPlaying ? <Pause /> : <PlayArrow />
-                }
-                onClick={toggleAudio}
-                disabled={isGenerating}
-                sx={{
-                  backgroundColor: ttsMethod === 'elevenlabs' ? "#ff6b35" : "#87CEEB",
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: ttsMethod === 'elevenlabs' ? "#e55a2b" : "#5ebbe0"
-                  },
-                  fontWeight: "700",
-                  minWidth: '160px'
-                }}
-              >
-                {isGenerating ? "جاري التوليد..." :
-                 isPlaying ? "إيقاف الصوت" :
-                 `تشغيل السؤال (${ttsMethod === 'elevenlabs' ? 'ElevenLabs AI' : 'Web Speech'})`}
-              </Button>
-
-              {/* Debug/Test Button for ElevenLabs */}
-              {ttsMethod === 'elevenlabs' && (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={async () => {
-                    const testText = "هذا اختبار لصوت ElevenLabs";
-                    // Testing ElevenLabs TTS
-                    await speakTextElevenLabs(testText);
-                  }}
-                  sx={{ mt: 1, fontSize: '0.8rem' }}
-                >
-                  اختبار ElevenLabs
-                </Button>
-              )}
-            </Box>
-
-            {/* Navigation Controls - same as cTeoria */}
+            {/* TTS Controls */}
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
-                gap: 1,
+                flexDirection: "column",
+                gap: 2,
+                p: 2,
+                backgroundColor: "background.paper",
+                borderRadius: 2,
+                border: "1px solid",
+                borderColor: "divider",
                 mt: 2,
               }}
             >
               <Button
                 variant="contained"
-                onClick={handlePrev}
-                disabled={currentIndex === 0}
+                startIcon={
+                  isPlaying ? <Pause /> : <PlayArrow />
+                }
+                onClick={toggleAudio}
                 sx={{
-                  fontWeight: 800,
+                  backgroundColor: "#87CEEB",
                   color: "white",
-                  bgcolor: "#737373",
-                  "&:hover": { backgroundColor: "#5c5c5c" },
-                }}
-              >
-                السابق
-              </Button>
-
-              <Button
-                variant="contained"
-                color="secondary"
-                sx={{
+                  "&:hover": {
+                    backgroundColor: "#5ebbe0"
+                  },
                   fontWeight: "700",
-                  bgcolor: "#87CEEB",
-                  color: "white",
-                  "&:hover": { bgcolor: "#5ebbe0" },
+                  minWidth: '160px'
                 }}
-                onClick={handleShowAnswer}
-                disabled={showAnswers[currentIndex]}
               >
-                التحقق من الإجابة
-              </Button>
-
-              <Button
-                variant="contained"
-                color="primary"
-                sx={{
-                  fontWeight: 800,
-                  color: "white",
-                  p: "10px 20px",
-                  "&:hover": { backgroundColor: "#a37729" },
-                }}
-                onClick={handleNext}
-                disabled={currentIndex === quiz.length - 1}
-              >
-                {currentIndex < quiz.length - 1 ? "التالي" : "إنهاء"}
+                {isPlaying ? "إيقاف الصوت" : "تشغيل السؤال"}
               </Button>
             </Box>
-          </Box>
+          </Paper>
+        </motion.div>
+      </AnimatePresence>
 
-          {/* Side Navigation - same as cTeoria */}
-          <Box sx={{ flex: 1 }}>
-            <MemoizedNavigation
-              totalQuestions={quiz.length}
-              currentIndex={currentIndex}
-              userAnswers={userAnswers}
-              visited={visited}
-              showAnswers={showAnswers}
-              onNavigate={(index) => {
-                setCurrentIndex(index);
-                scrollToQuestion();
-                stopSpeech();
-              }}
-            />
-          </Box>
-        </Box>
+      {/* Navigation Controls */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 1,
+          mt: 2,
+        }}
+      >
+        <Button
+          variant="contained"
+          onClick={handlePrev}
+          disabled={currentIndex === 0}
+          sx={{
+            fontWeight: 800,
+            color: "white",
+            bgcolor: "#737373",
+            "&:hover": { backgroundColor: "#5c5c5c" },
+          }}
+        >
+          السابق
+        </Button>
+
+        <Button
+          variant="contained"
+          color="secondary"
+          sx={{
+            fontWeight: 800,
+            color: "white",
+            bgcolor: "#2196F3",
+            "&:hover": { backgroundColor: "#1976D2" },
+          }}
+          onClick={() => router.push("/teoria/oral")}
+        >
+          إنهاء الامتحان
+        </Button>
+
+        <Button
+          variant="contained"
+          onClick={handleNext}
+          disabled={currentIndex === quiz.length - 1}
+          sx={{
+            fontWeight: 800,
+            color: "white",
+            bgcolor: "#4CAF50",
+            "&:hover": { backgroundColor: "#45a049" },
+          }}
+        >
+          التالي
+        </Button>
       </Box>
-    </>
+    </Container>
   );
 }

@@ -21,6 +21,24 @@
 body {
   direction: rtl;
   font-family: var(--font-cairo) !important;
+  /* Minimal scroll fixes - allow natural scrolling */
+  margin: 0;
+  padding: 0;
+  /* Allow natural scroll behavior */
+  -webkit-overflow-scrolling: touch;
+}
+
+html {
+  /* Allow normal document flow */
+  height: auto;
+  min-height: 100%;
+}
+
+/* Main container - allow normal scrolling */
+#__next {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes fadeIn {
@@ -84,4 +102,153 @@ body {
 
 .grid-item:first-child {
   background-color: #e0e0e0;
+}
+
+/* Mobile scrolling improvements - MINIMAL APPROACH */
+@media (max-width: 768px) {
+  /* Allow natural scrolling behavior */
+  html, body {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+  
+  /* Allow normal scrolling in containers */
+  .MuiContainer-root, .MuiBox-root, .MuiGrid-root {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Improve button touch targets */
+  .MuiButton-root {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent iframe scrolling issues */
+  iframe {
+    overscroll-behavior: contain;
+  }
+}
+
+/* Additional mobile touch improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Touch device specific styles */
+  body {
+    touch-action: pan-y;
+  }
+  
+  /* Prevent zoom on input focus */
+  input, textarea, select {
+    font-size: 16px;
+  }
+  
+  /* Improve touch scrolling performance */
+  .scrollable-content {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+}
+
+/* Force disable all smooth scrolling to prevent jumping */
+* {
+  scroll-behavior: auto !important;
+}
+
+html, body {
+  scroll-behavior: auto !important;
+}
+
+/* MINIMAL FIX - Allow natural scrolling */
+.quiz-navigation, .MuiBox-root, .MuiContainer-root {
+  scroll-behavior: auto !important;
+}
+
+/* Allow natural scrolling in quiz components */
+[data-testid="quiz-container"], .quiz-container, .question-container {
+  scroll-behavior: auto !important;
+}
+
+/* Disable AOS animations on mobile to prevent jumping */
+@media (max-width: 768px) {
+  [data-aos] {
+    transform: none !important;
+    opacity: 1 !important;
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  /* Completely disable AOS library on mobile */
+  .aos-init {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  
+  .aos-animate {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Footer scroll fix - ensure complete scrollability */
+footer, [component="footer"] {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  pointer-events: auto;
+  /* Ensure footer doesn't block scrolling */
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure body and html allow scrolling to the very bottom */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Ensure scroll position resets properly */
+  scroll-behavior: auto;
+}
+
+/* Ensure main content area doesn't interfere */
+main {
+  min-height: calc(100vh - 200px); /* Adjust based on header height */
+  position: relative;
+  z-index: 1;
+}
+
+/* Force enable scrolling in footer area */
+footer * {
+  pointer-events: auto;
+  touch-action: pan-y;
+}
+
+/* CRITICAL: Ensure footer area is completely scrollable */
+@media (max-width: 768px) {
+  footer, [component="footer"] {
+    position: relative !important;
+    z-index: 1 !important;
+    overflow: visible !important;
+    pointer-events: auto !important;
+    touch-action: pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
+    /* Remove any potential scroll blocking */
+    overscroll-behavior: auto !important;
+    overscroll-behavior-y: auto !important;
+    overscroll-behavior-x: auto !important;
+  }
+  
+  /* Ensure no invisible elements block scrolling */
+  footer::before, footer::after,
+  [component="footer"]::before, [component="footer"]::after {
+    display: none !important;
+    content: none !important;
+    pointer-events: none !important;
+  }
+  
+  /* Force all footer children to be scrollable */
+  footer *, [component="footer"] * {
+    pointer-events: auto !important;
+    touch-action: pan-y !important;
+    overflow: visible !important;
+  }
 }

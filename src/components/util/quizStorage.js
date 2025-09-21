@@ -445,3 +445,105 @@ export const loadTypeWrongAnswers = loadAllTypeWrongAnswers;
 export const loadTypeBookmarks = loadAllTypeBookmarks;
 export const loadTypeScores = loadAllTypeScores;
 
+/* --------------------------------------------------------------------------
+   SAVED QUESTIONS (BOOKMARKS)
+   -------------------------------------------------------------------------- */
+
+/**
+ * Load saved questions (bookmarks) for a specific quiz type and level
+ * @param {string} qType - The quiz type (e.g., 'training', 'private', etc.)
+ * @param {string} type - The quiz level (e.g., 'quizes', 'oral', etc.)
+ * @returns {Promise<Array>} Array of saved question objects
+ */
+export async function loadSavedQuestions(qType, type) {
+  try {
+    const bookmarks = await loadAllTypeBookmarks(qType, type);
+    if (!bookmarks || Object.keys(bookmarks).length === 0) {
+      return [];
+    }
+
+    // Load the quiz data to get the actual questions
+    const quizData = await import('@/pages/data.json');
+    const questions = [];
+    
+    // Get all quiz numbers for this type
+    const quizNumbers = Object.keys(quizData.default[qType]?.[type] || {});
+    
+    for (const quizNumber of quizNumbers) {
+      const quizQuestions = quizData.default[qType][type][quizNumber];
+      const bookmarkedIndices = bookmarks[quizNumber] || [];
+      
+      if (Array.isArray(quizQuestions) && Array.isArray(bookmarkedIndices)) {
+        // Add questions that are bookmarked
+        bookmarkedIndices.forEach((questionIndex) => {
+          if (quizQuestions[questionIndex]) {
+            questions.push({
+              ...quizQuestions[questionIndex],
+              _originalQuizNumber: quizNumber,
+              _originalQuestionIndex: questionIndex,
+            });
+          }
+        });
+      }
+    }
+    
+    return questions;
+  } catch (error) {
+    console.error('Error loading saved questions:', error);
+    return [];
+  }
+}
+
+/**
+ * Load wrong answers for a specific quiz type and level
+ * @param {string} qType - The quiz type (e.g., 'training', 'private', etc.)
+ * @param {string} type - The quiz level (e.g., 'quizes', 'oral', etc.)
+ * @returns {Promise<Array>} Array of wrong answer question objects
+ */
+export async function loadWrongAnswers(qType, type) {
+  try {
+    const wrongAnswers = await loadAllTypeWrongAnswers(qType, type);
+    console.log('Debug - wrongAnswers for', qType, type, ':', wrongAnswers);
+    
+    if (!wrongAnswers || Object.keys(wrongAnswers).length === 0) {
+      console.log('Debug - No wrong answers found');
+      return [];
+    }
+
+    // Load the quiz data to get the actual questions
+    const quizData = await import('@/pages/data.json');
+    const questions = [];
+    
+    // Get all quiz numbers for this type
+    const quizNumbers = Object.keys(quizData.default[qType]?.[type] || {});
+    console.log('Debug - Available quiz numbers:', quizNumbers);
+    
+    for (const quizNumber of quizNumbers) {
+      const quizQuestions = quizData.default[qType][type][quizNumber];
+      const wrongQuestionsObj = wrongAnswers[quizNumber] || {};
+      console.log(`Debug - Quiz ${quizNumber} wrong answers:`, wrongQuestionsObj);
+      
+      if (Array.isArray(quizQuestions) && typeof wrongQuestionsObj === 'object') {
+        // Add questions that have wrong answers
+        Object.keys(wrongQuestionsObj).forEach((questionIndexStr) => {
+          const questionIndex = parseInt(questionIndexStr);
+          if (quizQuestions[questionIndex]) {
+            questions.push({
+              ...quizQuestions[questionIndex],
+              _originalQuizNumber: quizNumber,
+              _originalQuestionIndex: questionIndex,
+              _wrongCount: wrongQuestionsObj[questionIndexStr],
+            });
+          }
+        });
+      }
+    }
+    
+    console.log('Debug - Final questions array:', questions);
+    return questions;
+  } catch (error) {
+    console.error('Error loading wrong answers:', error);
+    return [];
+  }
+}
+

@@ -19,15 +19,20 @@ export default function QuizTypePage() {
   const router = useRouter();
   const { qType, type } = router.query;
 
+  // RESTORED: Use proper state management without infinite loops
   const [isLoading, setIsLoading] = useState(true);
   const [numberOfSaved, setNumberOfSaved] = useState(0);
   const [numberOfWrong, setNumberOfWrong] = useState(0);
   const [lastScores, setLastScores] = useState({});
 
+  // RESTORED: Use useQuizData hook (now fixed to prevent infinite loops)
   const { data: quizData, loading: quizDataLoading } = useQuizData();
 
   useEffect(() => {
-    if (!router.isReady || !qType || !type || !quizData) return;
+    // RESTORED: Fetch statistics but with proper dependency management
+    if (!router.isReady || !qType || !type) return;
+    // Don't depend on quizData to prevent infinite loop
+    if (quizDataLoading) return;
 
     const fetchStatistics = async () => {
       try {
@@ -48,13 +53,13 @@ export default function QuizTypePage() {
     };
 
     fetchStatistics();
-  }, [router.isReady, qType, type, quizData]);
+  }, [router.isReady, qType, type, quizDataLoading]); // FIXED: Proper dependencies without infinite loop
 
   if (!router.isReady || isLoading || quizDataLoading || !quizData) {
     return (
       <>
         <SectionHero title="تحميل..." subTitle="" />
-        <Container sx={{ py: "30px", overflow: "hidden" }}>
+        <Container sx={{ py: "30px", overflow: "visible" }}>
           <Box display="flex" justifyContent="center" mb={6} gap={1.4}>
             {[1, 2].map((i) => (
               <Skeleton
@@ -125,7 +130,7 @@ export default function QuizTypePage() {
   return (
     <>
       <SectionHero title={`أسئلة التؤوريا ${friendlyType}`} subTitle="" />
-      <Container sx={{ py: "30px", overflow: "hidden" }}>
+      <Container sx={{ py: "30px", overflow: "visible" }}>
         <Box display="flex" justifyContent="center" mb={2}>
           <Button
             variant="contained"

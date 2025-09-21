@@ -39,13 +39,20 @@ export default function Footer() {
         backgroundColor: "black",
         color: "white",
         py: 4,
-        overflowX: "hidden",
+        position: "relative",
+        zIndex: 1,
+        overflow: "visible",
       }}
-      data-aos="fade-in"
-      data-aos-easing="ease-in-back"
-      data-aos-offset="-600"
     >
-      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 6 } }}>
+      <Container 
+        maxWidth="lg" 
+        sx={{ 
+          px: { xs: 2, sm: 3, md: 6 },
+          overflow: "visible",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
         <Grid container spacing={3} justifyContent="space-between">
           <Grid item xs={12} md={3}>
              <Card

@@ -18,16 +18,14 @@ export default function ActionAreaCard({
 }) {
   return (
     <Card
-      data-aos="fade-in"
       sx={{
         position: "relative",
         overflow: "visible",
         borderTop: "8px solid var(--primary1)", // Initial border color
-        transition:
-          "border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease",
+        transition: "border-color 0.3s ease, box-shadow 0.3s ease",
         "&:hover": {
           borderTop: "8px solid var(--primary2)", // Border color on hover
-          transform: "translateY(-4px)", // Slight lift on hover
+          // Removed transform to prevent jumping
           boxShadow: "0 8px 16px rgba(0,0,0,0.2)", // Enhanced shadow on hover
           // Target the number circle when the card is hovered
           "& .numberCircle": {

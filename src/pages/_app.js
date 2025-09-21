@@ -33,15 +33,62 @@ function App({ Component, pageProps }) {
   const router = useRouter();
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
 
-  // Initialize AOS animations
+  // Initialize AOS animations - DISABLED ON MOBILE
   useEffect(() => {
-    AOS.init({
-      duration: 500,
-      once: true,
-      offset: -80,
-      easing: "ease-in-out",
-    });
+    // Check if it's a mobile device
+    const isMobile = window.innerWidth <= 768;
+    
+    if (!isMobile) {
+      AOS.init({
+        duration: 500,
+        once: true,
+        offset: -80,
+        easing: "ease-in-out",
+      });
+    }
   }, []);
+
+  // Fix scroll position on route change
+  useEffect(() => {
+    const handleRouteChange = () => {
+      // Use setTimeout to ensure content is rendered before scrolling
+      setTimeout(() => {
+        // Scroll to top when route changes - use multiple methods for better compatibility
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        
+        // For mobile devices, also try scrolling the main element
+        const mainElement = document.querySelector('main');
+        if (mainElement) {
+          mainElement.scrollTop = 0;
+        }
+        
+        // Force scroll to top with smooth behavior disabled
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: 'auto'
+        });
+      }, 300); // Longer delay to ensure content is fully rendered
+    };
+
+    // Listen for route changes
+    router.events.on('routeChangeComplete', handleRouteChange);
+    
+    // Also listen for route change start to scroll immediately
+    router.events.on('routeChangeStart', () => {
+      window.scrollTo(0, 0);
+    });
+    
+    // Cleanup
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+      router.events.off('routeChangeStart', () => {
+        window.scrollTo(0, 0);
+      });
+    };
+  }, [router.events]);
 
   // Initialize background sync
   useEffect(() => {
@@ -83,13 +130,14 @@ function App({ Component, pageProps }) {
   };
 
   return (
-    <div className={cairo.variable}>
+    <div className={cairo.variable} style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <OfflineIndicator />
       <Providers>
           <Header />
-          <div style={{ minHeight: "100vh" }}>
+          <main style={{ flex: 1, position: "relative", zIndex: 1 }}>
+            {/* Fixed scrolling issues - no more jumping */}
             <Component {...pageProps} />
-          </div>
+          </main>
           <Footer />
       </Providers>
       <ConfirmExitDialog

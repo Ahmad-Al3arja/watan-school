@@ -124,13 +124,11 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
     return () => clearInterval(timer);
   }, [quiz]);
 
-  // Scroll the view so that the question is at the top
+  // Scroll the view so that the question is at the top - COMPLETELY DISABLED
   const scrollToQuestion = useCallback(() => {
-    if (questionTitleRef.current) {
-      const elementPosition = questionTitleRef.current.offsetTop - headerHeight;
-      window.scrollTo({ top: elementPosition, behavior: "smooth" });
-    }
-  }, [headerHeight]);
+    // COMPLETELY DISABLED - NO SCROLLING AT ALL
+    return;
+  }, []);
 
   // Evaluate quiz answers, record wrong, show final score
   const handleFinish = useCallback(async () => {
@@ -186,7 +184,7 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
   const handleNext = useCallback(() => {
     if (currentIndex < quiz.length - 1) {
       setCurrentIndex(currentIndex + 1);
-      scrollToQuestion();
+      // Removed scrollToQuestion() call to prevent jumping
     } else {
       setTimeout(() => {
         handleFinish();
@@ -198,7 +196,7 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
   const handlePrev = useCallback(() => {
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
-      scrollToQuestion();
+      // Removed scrollToQuestion() call to prevent jumping
     }
   }, [currentIndex, scrollToQuestion]);
 
@@ -212,9 +210,10 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
         return newAnswers;
       });
 
-      if (autoNext && currentIndex < quiz.length - 1) {
-        setTimeout(handleNext, 250);
-      }
+      // Disabled autoNext to prevent jumping
+      // if (autoNext && currentIndex < quiz.length - 1) {
+      //   setTimeout(handleNext, 250);
+      // }
     },
     [autoNext, currentIndex, quiz, handleNext]
   );
@@ -252,9 +251,10 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
         // Error recording wrong answer
       }
     }
-    if (autoNext && currentIndex < quiz.length - 1) {
-      setTimeout(handleNext, 250);
-    }
+    // Disabled autoNext to prevent jumping
+    // if (autoNext && currentIndex < quiz.length - 1) {
+    //   setTimeout(handleNext, 250);
+    // }
   }, [
     currentIndex,
     userAnswers,
@@ -332,7 +332,7 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
             display: "flex",
             flexDirection: { xs: "column", md: "row" },
             gap: 2,
-            mt: 2,
+            mt: 2
           }}
         >
           {/* Main Question Area */}
@@ -442,7 +442,7 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
               showAnswers={showAnswers}
               onNavigate={(index) => {
                 setCurrentIndex(index);
-                scrollToQuestion();
+                // Removed scrollToQuestion() call to prevent jumping
               }}
             />
           </Box>
