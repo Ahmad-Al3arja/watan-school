@@ -33,18 +33,21 @@ function App({ Component, pageProps }) {
   const router = useRouter();
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
 
-  // Initialize AOS animations - DISABLED ON MOBILE
+  // Initialize AOS animations - DISABLED ON SMALL MOBILE ONLY
   useEffect(() => {
-    // Check if it's a mobile device
-    const isMobile = window.innerWidth <= 768;
-    
-    if (!isMobile) {
-      AOS.init({
-        duration: 500,
-        once: true,
-        offset: -80,
-        easing: "ease-in-out",
-      });
+    // Check if it's a small mobile device (phones only) - only on client side
+    if (typeof window !== 'undefined') {
+      const isSmallMobile = window.innerWidth <= 480;
+
+      if (!isSmallMobile) {
+        AOS.init({
+          duration: 500,
+          once: true,
+          offset: -80,
+          easing: "ease-in-out",
+          disable: false, // Ensure AOS is enabled for tablets and desktops
+        });
+      }
     }
   }, []);
 

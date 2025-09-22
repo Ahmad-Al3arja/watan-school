@@ -140,9 +140,7 @@ export default function StreetSigns() {
               alignItems: "center",
             }}
           >
-            <Typography variant="h6">
-              إشارة مرورية {currentIndex + 1} من {imageNumbers.length}
-            </Typography>
+            إشارة مرورية {currentIndex + 1} من {imageNumbers.length}
             <IconButton onClick={handleClose}>
               <CloseIcon />
             </IconButton>

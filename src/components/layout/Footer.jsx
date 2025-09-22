@@ -240,7 +240,7 @@ export default function Footer() {
 
         <Box mt={4} textAlign="center">
           <Typography variant="body1" color="white">
-            {`© ${new Date().getFullYear()} | مدرسة الوطن | جميع الحقوق محفوظة.`}
+            © 2024 | مدرسة الوطن | جميع الحقوق محفوظة.
           </Typography>
           <Typography variant="body1" color="white">
             Made by

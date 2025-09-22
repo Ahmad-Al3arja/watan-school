@@ -167,25 +167,44 @@ html, body {
   scroll-behavior: auto !important;
 }
 
-/* Disable AOS animations on mobile to prevent jumping */
-@media (max-width: 768px) {
+/* Disable AOS animations only on small mobile devices to prevent jumping */
+@media (max-width: 480px) {
   [data-aos] {
     transform: none !important;
     opacity: 1 !important;
     transition: none !important;
     animation: none !important;
   }
-  
-  /* Completely disable AOS library on mobile */
+
+  /* Completely disable AOS library on small mobile */
   .aos-init {
     opacity: 1 !important;
     transform: none !important;
   }
-  
+
   .aos-animate {
     opacity: 1 !important;
     transform: none !important;
   }
+}
+
+/* Ensure elements are visible by default on tablets and desktops */
+@media (min-width: 481px) {
+  [data-aos]:not(.aos-animate) {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Fallback: Ensure all AOS elements are visible after page load to prevent invisible content */
+[data-aos] {
+  opacity: 1;
+  transform: none;
+}
+
+/* AOS will override this when it initializes properly */
+.aos-init[data-aos] {
+  opacity: 0;
 }
 
 /* Footer scroll fix - ensure complete scrollability */
