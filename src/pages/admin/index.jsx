@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Box, Container, Typography, TextField, Button, Alert, CircularProgress, MenuItem, Tooltip, Portal } from '@mui/material';
 import TrainingCodesTab from '@/components/admin/TrainingCodesTab';
+import SettingsTab from '@/components/admin/SettingsTab';
 
 // Sign Renderer Component
 function SignRenderer({ text }) {
@@ -270,6 +271,12 @@ function AdminDashboard() {
               أسعار الرخص
             </Button>
             <Button
+              variant={activeTab === 'settings' ? 'contained' : 'text'}
+              onClick={() => setActiveTab('settings')}
+            >
+              الإعدادات
+            </Button>
+            <Button
               variant={activeTab === 'license-procedures' ? 'contained' : 'text'}
               onClick={() => setActiveTab('license-procedures')}
             >
@@ -344,6 +351,12 @@ function AdminDashboard() {
 
         {activeTab === 'license-pricing' && (
           <LicensePricingTab
+            getAuthHeaders={getAuthHeaders}
+          />
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsTab
             getAuthHeaders={getAuthHeaders}
           />
         )}

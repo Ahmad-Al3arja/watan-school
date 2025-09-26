@@ -14,6 +14,7 @@ import FacebookIcon from "@mui/icons-material/Facebook";
 import PhoneAndroidIcon from "@mui/icons-material/PhoneAndroid";
 import LocalPhoneIcon from "@mui/icons-material/LocalPhone";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import NextLink from "next/link";
 
 // Custom TikTok Icon Component
 const TikTokIcon = () => (
@@ -115,14 +116,20 @@ export default function Footer() {
                  </Typography>
                  
                  <Box sx={{ display: "flex", justifyContent: "center", gap: 1 }}>
-                   <IconButton
-                     aria-label="Facebook"
+                   <Link
                      href="https://www.facebook.com/profile.php?id=100047642302296&locale=ar_AR"
                      target="_blank"
                      rel="noopener noreferrer"
                      sx={{ 
                        color: "#ffffff",
                        backgroundColor: alpha("#ffffff", 0.1),
+                       borderRadius: "50%",
+                       display: "flex",
+                       alignItems: "center",
+                       justifyContent: "center",
+                       width: 40,
+                       height: 40,
+                       textDecoration: "none",
                        "&:hover": {
                          backgroundColor: alpha("#ffffff", 0.2),
                          transform: "scale(1.1)",
@@ -131,15 +138,21 @@ export default function Footer() {
                      }}
                    >
                      <FacebookIcon />
-                   </IconButton>
-                   <IconButton
-                     aria-label="WhatsApp"
+                   </Link>
+                   <Link
                      href="https://wa.me/+972568099911"
                      target="_blank"
                      rel="noopener noreferrer"
                      sx={{ 
                        color: "#ffffff",
                        backgroundColor: alpha("#ffffff", 0.1),
+                       borderRadius: "50%",
+                       display: "flex",
+                       alignItems: "center",
+                       justifyContent: "center",
+                       width: 40,
+                       height: 40,
+                       textDecoration: "none",
                        "&:hover": {
                          backgroundColor: alpha("#ffffff", 0.2),
                          transform: "scale(1.1)",
@@ -148,15 +161,21 @@ export default function Footer() {
                      }}
                    >
                      <WhatsAppIcon />
-                   </IconButton>
-                   <IconButton
-                     aria-label="TikTok"
+                   </Link>
+                   <Link
                      href="https://www.tiktok.com/@user385632226533?_t=ZS-8zmiSbkMgzM&_r=1"
                      target="_blank"
                      rel="noopener noreferrer"
                      sx={{ 
                        color: "#ffffff",
                        backgroundColor: alpha("#ffffff", 0.1),
+                       borderRadius: "50%",
+                       display: "flex",
+                       alignItems: "center",
+                       justifyContent: "center",
+                       width: 40,
+                       height: 40,
+                       textDecoration: "none",
                        "&:hover": {
                          backgroundColor: alpha("#ffffff", 0.2),
                          transform: "scale(1.1)",
@@ -165,7 +184,7 @@ export default function Footer() {
                      }}
                    >
                      <TikTokIcon />
-                   </IconButton>
+                   </Link>
                  </Box>
                </CardContent>
              </Card>
@@ -217,18 +236,26 @@ export default function Footer() {
                       {navItem.title}
                     </Typography>
                     {navItem.subMenu && navItem.subMenu.length > 0 ? (
-                      navItem.subMenu.map((subItem, subIdx) => (
-                        <Box key={subIdx} mb={1}>
-                          <Link
-                            href={subItem.path}
-                            underline="hover"
-                            color="inherit"
-                            sx={{ fontSize: "0.9rem", opacity: 0.8 }}
-                          >
-                            {subItem.title}
-                          </Link>
-                        </Box>
-                      ))
+                        navItem.subMenu.map((subItem, subIdx) => (
+                          <Box key={subIdx} mb={1}>
+                           <NextLink href={subItem.path} passHref legacyBehavior>
+                             <Link
+                               underline="hover"
+                               color="inherit"
+                               sx={{ 
+                                 fontSize: "0.9rem", 
+                                 opacity: 0.8,
+                                 cursor: "pointer",
+                                 "&:hover": {
+                                   opacity: 1
+                                 }
+                               }}
+                             >
+                               {subItem.title}
+                             </Link>
+                           </NextLink>
+                          </Box>
+                        ))
                     ) : (
                       <></>
                     )}
@@ -243,15 +270,21 @@ export default function Footer() {
             © 2024 | مدرسة الوطن | جميع الحقوق محفوظة.
           </Typography>
           <Typography variant="body1" color="white">
-            Made by
+            Made by{" "}
             <Link
               href="https://wa.me/+972594262092"
               color="#36a336"
               target="_blank"
-              fontSize={20}
-              fontWeight={800}
-              sx={{ textDecoration: "none" }}
-              p={1}
+              rel="noopener noreferrer"
+              sx={{ 
+                fontSize: 20,
+                fontWeight: 800,
+                textDecoration: "none",
+                px: 1,
+                "&:hover": {
+                  textDecoration: "underline"
+                }
+              }}
             >
               Ahmad Alarjah
             </Link>

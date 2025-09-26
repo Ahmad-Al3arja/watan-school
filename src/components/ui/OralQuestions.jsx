@@ -119,7 +119,22 @@ export default function OralQuestions() {
   const toggleAudio = async () => {
     const currentQuestion = quiz[currentIndex];
     if (currentQuestion) {
-      const textToSpeak = `${currentQuestion.question} ${currentQuestion.a} ${currentQuestion.b || ''}`;
+      let textToSpeak = currentQuestion.question;
+      
+      // Add answers with simple format for better pronunciation
+      if (currentQuestion.a) {
+        textToSpeak += ` الخيار الاول: ${currentQuestion.a}`;
+      }
+      if (currentQuestion.b) {
+        textToSpeak += ` الخيار الثاني: ${currentQuestion.b}`;
+      }
+      if (currentQuestion.c) {
+        textToSpeak += ` الخيار الثالث: ${currentQuestion.c}`;
+      }
+      if (currentQuestion.d) {
+        textToSpeak += ` الخيار الرابع: ${currentQuestion.d}`;
+      }
+      
       await tts.toggle(textToSpeak);
     }
   };

@@ -13,6 +13,9 @@ import QuestionNavigation from "@/components/ui/quizPage/QuestionNavigation";
 import {
   recordWrongAnswerTypeLevel,
   recordLastScore,
+  saveExamProgress,
+  loadExamProgress,
+  clearExamProgress,
 } from "@/components/util/quizStorage";
 
 // 1) IMPORT custom hooks for fetching data from Supabase
@@ -74,8 +77,9 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
   const router = useRouter();
   const questionTitleRef = useRef(null);
   const headerHeight = 100;
+  const isNavigatingRef = useRef(false);
 
-  // Simple state management without progress persistence
+  // State management with progress persistence
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState([]);
   const [visited, setVisited] = useState([0]);
@@ -85,21 +89,67 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
   const [scoreModalOpen, setScoreModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [autoNext, setAutoNext] = useState(false);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
 
-  // Initialize state when quiz changes
+  // Initialize quiz state once when component mounts or quiz changes
   useEffect(() => {
-    if (quiz && quiz.length > 0) {
-      setCurrentIndex(0);
-      setUserAnswers(Array(quiz.length).fill(null));
-      setVisited([0]);
-      setTimeLeft(40 * 60);
-      setShowAnswers(Array(quiz.length).fill(false));
-      setWrongRecordedQuestions(new Set());
-      setScoreModalOpen(false);
-      setModalOpen(false);
-      setAutoNext(false);
-    }
-  }, [quiz]);
+    if (!quiz || quiz.length === 0) return;
+
+    const initializeQuiz = async () => {
+      setIsLoadingProgress(true);
+      try {
+        const savedProgress = await loadExamProgress(qType, type, quizNumber);
+        
+        if (savedProgress && savedProgress.quizContent && 
+            savedProgress.quizContent.length === quiz.length) {
+          // Found valid saved progress, restore it
+          setCurrentIndex(savedProgress.currentIndex || 0);
+          setUserAnswers(savedProgress.userAnswers || Array(quiz.length).fill(null));
+          setVisited(savedProgress.visited || [0]);
+          setTimeLeft(savedProgress.timeLeft || 40 * 60);
+          setShowAnswers(savedProgress.showAnswers || Array(quiz.length).fill(false));
+          setWrongRecordedQuestions(new Set());
+          setScoreModalOpen(false);
+          setModalOpen(false);
+          setAutoNext(false);
+          
+          // Update quiz content if callback provided
+          if (onQuizContentUpdate && savedProgress.quizContent) {
+            onQuizContentUpdate(savedProgress.quizContent);
+          }
+        } else {
+          // No valid saved progress, start fresh
+          setCurrentIndex(0);
+          setUserAnswers(Array(quiz.length).fill(null));
+          setVisited([0]);
+          setTimeLeft(40 * 60);
+          setShowAnswers(Array(quiz.length).fill(false));
+          setWrongRecordedQuestions(new Set());
+          setScoreModalOpen(false);
+          setModalOpen(false);
+          setAutoNext(false);
+        }
+      } catch (error) {
+        console.error("Error loading progress:", error);
+        // Fallback to fresh start
+        setCurrentIndex(0);
+        setUserAnswers(Array(quiz.length).fill(null));
+        setVisited([0]);
+        setTimeLeft(40 * 60);
+        setShowAnswers(Array(quiz.length).fill(false));
+        setWrongRecordedQuestions(new Set());
+        setScoreModalOpen(false);
+        setModalOpen(false);
+        setAutoNext(false);
+      } finally {
+        setIsLoadingProgress(false);
+      }
+    };
+
+    // Use a timeout to ensure this only runs once
+    const timeoutId = setTimeout(initializeQuiz, 0);
+    return () => clearTimeout(timeoutId);
+  }, [quiz?.length, qType, type, quizNumber]); // Only depend on stable values
 
   // Mark current question as visited
   useEffect(() => {
@@ -107,6 +157,35 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
       prev.includes(currentIndex) ? prev : [...prev, currentIndex]
     );
   }, [currentIndex]);
+
+  // Auto-save progress whenever state changes (but not during initial loading or navigation)
+  useEffect(() => {
+    if (isLoadingProgress || !quiz || quiz.length === 0 || isNavigatingRef.current) return;
+
+    const saveProgress = async () => {
+      try {
+        console.log("Saving progress:", { currentIndex, userAnswers: userAnswers.length, visited: visited.length, timeLeft });
+        await saveExamProgress(
+          qType,
+          type,
+          quizNumber,
+          currentIndex,
+          userAnswers,
+          visited,
+          timeLeft,
+          showAnswers,
+          quiz
+        );
+        console.log("Progress saved successfully");
+      } catch (error) {
+        console.error("Error saving progress:", error);
+      }
+    };
+
+    // Debounce saving to avoid too frequent saves
+    const timeoutId = setTimeout(saveProgress, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [currentIndex, userAnswers, visited, timeLeft, showAnswers, qType, type, quizNumber, isLoadingProgress]);
 
   // Timer logic – counts down every second and shows “Time Up” modal when finished
   useEffect(() => {
@@ -176,6 +255,14 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
     if (quizNumber !== "random") {
       await recordLastScore(qType, type, quizNumber, score, quiz.length);
     }
+    
+    // Clear progress when exam is completed
+    try {
+      await clearExamProgress(qType, type, quizNumber);
+    } catch (error) {
+      console.error("Error clearing progress:", error);
+    }
+    
     setShowAnswers(Array(quiz.length).fill(true));
     setScoreModalOpen(true);
   }, [quiz, userAnswers, wrongRecordedQuestions, quizNumber, type, qType]);
@@ -183,8 +270,12 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
   // Go to next question, or finish if this is the last
   const handleNext = useCallback(() => {
     if (currentIndex < quiz.length - 1) {
+      isNavigatingRef.current = true;
       setCurrentIndex(currentIndex + 1);
-      // Removed scrollToQuestion() call to prevent jumping
+      // Reset navigation flag after a short delay
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 100);
     } else {
       setTimeout(() => {
         handleFinish();
@@ -195,10 +286,37 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
   // Go to previous question
   const handlePrev = useCallback(() => {
     if (currentIndex > 0) {
+      isNavigatingRef.current = true;
       setCurrentIndex((prev) => prev - 1);
-      // Removed scrollToQuestion() call to prevent jumping
+      // Reset navigation flag after a short delay
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 100);
     }
   }, [currentIndex, scrollToQuestion]);
+
+  // Manual save function
+  const saveProgressManually = useCallback(async () => {
+    if (!quiz || quiz.length === 0) return;
+    
+    try {
+      console.log("Manual save triggered");
+      await saveExamProgress(
+        qType,
+        type,
+        quizNumber,
+        currentIndex,
+        userAnswers,
+        visited,
+        timeLeft,
+        showAnswers,
+        quiz
+      );
+      console.log("Manual save completed");
+    } catch (error) {
+      console.error("Error in manual save:", error);
+    }
+  }, [qType, type, quizNumber, currentIndex, userAnswers, visited, timeLeft, showAnswers, quiz]);
 
   // When user selects an option
   const handleSelect = useCallback(
@@ -210,12 +328,17 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
         return newAnswers;
       });
 
-      // Disabled autoNext to prevent jumping
-      // if (autoNext && currentIndex < quiz.length - 1) {
-      //   setTimeout(handleNext, 250);
-      // }
+      // Save progress immediately when user answers
+      setTimeout(() => {
+        saveProgressManually();
+      }, 100);
+
+      // Auto navigation when enabled
+      if (autoNext && currentIndex < quiz.length - 1) {
+        setTimeout(handleNext, 250);
+      }
     },
-    [autoNext, currentIndex, quiz, handleNext]
+    [autoNext, currentIndex, quiz, handleNext, saveProgressManually]
   );
 
   // Check the answer & record wrong if needed
@@ -251,10 +374,10 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
         // Error recording wrong answer
       }
     }
-    // Disabled autoNext to prevent jumping
-    // if (autoNext && currentIndex < quiz.length - 1) {
-    //   setTimeout(handleNext, 250);
-    // }
+    // Auto navigation when enabled
+    if (autoNext && currentIndex < quiz.length - 1) {
+      setTimeout(handleNext, 250);
+    }
   }, [
     currentIndex,
     userAnswers,
@@ -268,7 +391,14 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
   ]);
 
   // Restart the quiz
-  const handleRestart = useCallback(() => {
+  const handleRestart = useCallback(async () => {
+    // Clear saved progress
+    try {
+      await clearExamProgress(qType, type, quizNumber);
+    } catch (error) {
+      console.error("Error clearing progress:", error);
+    }
+    
     setCurrentIndex(0);
     setUserAnswers(Array(quiz.length).fill(null));
     setVisited([0]);
@@ -278,7 +408,7 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
     setScoreModalOpen(false);
     setModalOpen(false);
     setAutoNext(false);
-  }, [quiz]);
+  }, [quiz, qType, type, quizNumber]);
 
   // Map type keys to user-friendly names
   const mapTypes = {
@@ -298,6 +428,15 @@ export default function Quiz({ qType, type, quizNumber, quiz, quizData, onQuizCo
     return (
       <Box sx={{ p: 4 }}>
         <h2>لا يوجد أسئلة لهذا الامتحان</h2>
+      </Box>
+    );
+  }
+
+  // Show loading state while progress is being loaded
+  if (isLoadingProgress) {
+    return (
+      <Box sx={{ p: 4, textAlign: "center" }}>
+        <h2>جاري تحميل التقدم المحفوظ...</h2>
       </Box>
     );
   }

@@ -131,7 +131,7 @@ export default function QuizTypePage() {
     <>
       <SectionHero title={`أسئلة التؤوريا ${friendlyType}`} subTitle="" />
       <Container sx={{ py: "30px", overflow: "visible" }}>
-        <Box display="flex" justifyContent="center" mb={2}>
+        <Box display="flex" justifyContent="center" mb={2} gap={2}>
           <Button
             variant="contained"
             color="primary"
@@ -143,6 +143,19 @@ export default function QuizTypePage() {
             }}
           >
             اختبر نفسك
+          </Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => router.push(`/teoria/${qType}/${type}/comprehensive`)}
+            sx={{
+              fontWeight: "700",
+              p: "10px 20px",
+              backgroundColor: "#FF9800",
+              "&:hover": { backgroundColor: "#F57C00" },
+            }}
+          >
+            امتحان شامل
           </Button>
         </Box>
         <Box
