@@ -2,8 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   trailingSlash: true,
-  // Only use static export for production builds (when building for Capacitor)
-  ...(process.env.NODE_ENV === 'production' && { output: 'export' }),
+  // Only use static export for Capacitor builds, not for Vercel
+  ...(process.env.CAPACITOR_BUILD === 'true' && { output: 'export' }),
   images: {
     unoptimized: true,
   },

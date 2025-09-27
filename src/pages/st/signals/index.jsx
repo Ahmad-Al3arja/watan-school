@@ -45,6 +45,8 @@ export default function SignalsPage() {
         const isCacheValid = cacheAge < 24 * 60 * 60 * 1000; // 24 hours
         
         // Show cached data immediately if available
+        // For offline: use any cached data regardless of age
+        // For online: use cache if it's less than 24 hours old
         if (cachedData && (isOffline || isCacheValid)) {
           console.log('Using cached signals data');
           const parsedData = JSON.parse(cachedData);

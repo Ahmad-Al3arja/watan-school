@@ -20,6 +20,7 @@ import ConfirmExitDialog from "../components/layout/Exit";
 import OfflineIndicator from "../components/ui/OfflineIndicator";
 import backgroundSync from "../components/util/backgroundSync";
 import '../components/layout/GallerySwiper.css';
+import { supabase } from "../../lib/supabase";
 
 
 // Initialize the Cairo font
@@ -100,6 +101,67 @@ function App({ Component, pageProps }) {
     return () => {
       backgroundSync.stop();
     };
+  }, []);
+
+  // Pre-cache signals data on app startup
+  useEffect(() => {
+    const preCacheSignals = async () => {
+      try {
+        // Check if we already have cached data
+        const cachedData = localStorage.getItem('signals_data');
+        const cacheTimestamp = localStorage.getItem('signals_cache_timestamp');
+        
+        // If we have recent cache (less than 24 hours), skip pre-caching
+        if (cachedData && cacheTimestamp) {
+          const cacheAge = Date.now() - parseInt(cacheTimestamp);
+          if (cacheAge < 24 * 60 * 60 * 1000) { // 24 hours
+            console.log('Signals data already cached and fresh');
+            return;
+          } else {
+            console.log('Cache is older than 24 hours, will refresh in background');
+          }
+        }
+
+        // Fetch and cache signals data in background
+        console.log('Pre-caching signals data on app startup...');
+        const { data, error } = await supabase
+          .from('signals')
+          .select('*')
+          .order('type_index', { ascending: true })
+          .order('order_index', { ascending: true });
+
+        if (error) {
+          console.error('Error pre-caching signals:', error);
+          return;
+        }
+
+        // Group signals by type_index
+        const groupedSignals = [];
+        data.forEach(signal => {
+          if (!groupedSignals[signal.type_index]) {
+            groupedSignals[signal.type_index] = [];
+          }
+          groupedSignals[signal.type_index].push({
+            title: signal.title,
+            image: signal.image,
+            content: signal.content
+          });
+        });
+
+        // Cache the data
+        localStorage.setItem('signals_data', JSON.stringify(groupedSignals));
+        localStorage.setItem('signals_cache_timestamp', Date.now().toString());
+        console.log('Signals data pre-cached successfully on app startup');
+        
+      } catch (err) {
+        console.error('Error in pre-cache signals:', err);
+      }
+    };
+
+    // Only pre-cache if we're online
+    if (navigator.onLine) {
+      preCacheSignals();
+    }
   }, []);
 
   // Listen for the Android hardware back button
