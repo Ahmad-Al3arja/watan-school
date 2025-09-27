@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Box, Container, Typography, TextField, Button, Alert, CircularProgress, MenuItem, Tooltip, Portal } from '@mui/material';
 import TrainingCodesTab from '@/components/admin/TrainingCodesTab';
 import SettingsTab from '@/components/admin/SettingsTab';
+import SignalsTab from '@/components/admin/SignalsTab';
 
 // Sign Renderer Component
 function SignRenderer({ text }) {
@@ -288,6 +289,12 @@ function AdminDashboard() {
             >
               رموز التدريب
             </Button>
+            <Button
+              variant={activeTab === 'signals' ? 'contained' : 'text'}
+              onClick={() => setActiveTab('signals')}
+            >
+              إدارة الإشارات
+            </Button>
           </Box>
         </Box>
 
@@ -368,6 +375,12 @@ function AdminDashboard() {
         )}
         {activeTab === 'training-codes' && (
           <TrainingCodesTab
+            getAuthHeaders={getAuthHeaders}
+          />
+        )}
+
+        {activeTab === 'signals' && (
+          <SignalsTab
             getAuthHeaders={getAuthHeaders}
           />
         )}
